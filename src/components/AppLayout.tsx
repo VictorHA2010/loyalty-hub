@@ -9,6 +9,7 @@ import {
   Settings,
   QrCode,
   LogOut,
+  ArrowLeft,
 } from 'lucide-react';
 
 interface NavItem {
@@ -42,7 +43,11 @@ const AppLayout = ({ children, role }: AppLayoutProps) => {
 
   const handleSignOut = async () => {
     await signOut();
-    navigate('/auth');
+    navigate('/login');
+  };
+
+  const handleSwitchBusiness = () => {
+    navigate('/select-business');
   };
 
   return (
@@ -73,7 +78,14 @@ const AppLayout = ({ children, role }: AppLayoutProps) => {
             </NavLink>
           ))}
         </nav>
-        <div className="p-2 border-t border-border">
+        <div className="p-2 border-t border-border space-y-0.5">
+          <button
+            onClick={handleSwitchBusiness}
+            className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-secondary w-full transition-colors"
+          >
+            <ArrowLeft size={18} />
+            Cambiar negocio
+          </button>
           <button
             onClick={handleSignOut}
             className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-secondary w-full transition-colors"

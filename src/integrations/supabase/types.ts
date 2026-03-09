@@ -14,8 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      business_members: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          invited_by: string | null
+          role: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          invited_by?: string | null
+          role: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          invited_by?: string | null
+          role?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_members_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       businesses: {
         Row: {
+          active: boolean
           created_at: string
           id: string
           logo_url: string | null
@@ -23,6 +62,7 @@ export type Database = {
           slug: string
         }
         Insert: {
+          active?: boolean
           created_at?: string
           id?: string
           logo_url?: string | null
@@ -30,6 +70,7 @@ export type Database = {
           slug: string
         }
         Update: {
+          active?: boolean
           created_at?: string
           id?: string
           logo_url?: string | null
@@ -586,21 +627,21 @@ export type Database = {
       }
       user_roles: {
         Row: {
-          business_id: string
+          business_id: string | null
           created_at: string
           id: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Insert: {
-          business_id: string
+          business_id?: string | null
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
-          business_id?: string
+          business_id?: string | null
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
