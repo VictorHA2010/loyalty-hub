@@ -1,55 +1,56 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useOrgSettings } from '@/hooks/useData';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import AppLayout from '@/components/AppLayout';
 
 const AdminSettings = () => {
-  const { orgContext } = useAuth();
-  const { data: settings, isLoading } = useOrgSettings(orgContext?.organizationId);
+  const { businessContext } = useAuth();
   const queryClient = useQueryClient();
-  const [form, setForm] = useState({
-    brand_name: '',
-    primary_color: '',
-    secondary_color: '',
-    accent_color: '',
+
+  const { data: business, isLoading } = useQuery({
+    queryKey: ['business-detail', businessContext?.businessId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('businesses')
+        .select('*')
+        .eq('id', businessContext!.businessId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!businessContext?.businessId,
   });
+
+  const [form, setForm] = useState({ name: '', slug: '', logo_url: '' });
   const [saving, setSaving] = useState(false);
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
-    if (settings && !initialized) {
+    if (business && !initialized) {
       setForm({
-        brand_name: settings.brand_name || '',
-        primary_color: settings.primary_color || '',
-        secondary_color: settings.secondary_color || '',
-        accent_color: settings.accent_color || '',
+        name: business.name || '',
+        slug: business.slug || '',
+        logo_url: business.logo_url || '',
       });
       setInitialized(true);
     }
-  }, [settings, initialized]);
+  }, [business, initialized]);
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      if (settings) {
-        const { error } = await supabase
-          .from('organization_settings')
-          .update(form)
-          .eq('organization_id', orgContext!.organizationId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('organization_settings')
-          .insert({ ...form, organization_id: orgContext!.organizationId });
-        if (error) throw error;
-      }
-      queryClient.invalidateQueries({ queryKey: ['org-settings'] });
+      const { error } = await supabase
+        .from('businesses')
+        .update({ name: form.name, slug: form.slug, logo_url: form.logo_url || null })
+        .eq('id', businessContext!.businessId);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ['business-detail'] });
       toast.success('Configuración guardada');
     } catch (err: any) {
       toast.error(err.message);
@@ -58,6 +59,18 @@ const AdminSettings = () => {
     }
   };
 
+  if (isLoading) {
+    return (
+      <AppLayout role="admin">
+        <div className="max-w-lg space-y-4">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout role="admin">
       <div className="max-w-lg">
@@ -65,35 +78,27 @@ const AdminSettings = () => {
 
         <div className="space-y-4">
           <div className="space-y-1">
-            <Label>Nombre de marca</Label>
+            <Label>Nombre del negocio</Label>
             <Input
-              value={form.brand_name}
-              onChange={(e) => setForm({ ...form, brand_name: e.target.value })}
-              placeholder="Nombre visible para clientes"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              placeholder="Nombre visible"
             />
           </div>
           <div className="space-y-1">
-            <Label>Color primario</Label>
+            <Label>Slug</Label>
             <Input
-              value={form.primary_color}
-              onChange={(e) => setForm({ ...form, primary_color: e.target.value })}
-              placeholder="#007AFF"
+              value={form.slug}
+              onChange={(e) => setForm({ ...form, slug: e.target.value })}
+              placeholder="mi-negocio"
             />
           </div>
           <div className="space-y-1">
-            <Label>Color secundario</Label>
+            <Label>URL del logo</Label>
             <Input
-              value={form.secondary_color}
-              onChange={(e) => setForm({ ...form, secondary_color: e.target.value })}
-              placeholder="#F7F7F7"
-            />
-          </div>
-          <div className="space-y-1">
-            <Label>Color de acento</Label>
-            <Input
-              value={form.accent_color}
-              onChange={(e) => setForm({ ...form, accent_color: e.target.value })}
-              placeholder="#111111"
+              value={form.logo_url}
+              onChange={(e) => setForm({ ...form, logo_url: e.target.value })}
+              placeholder="https://..."
             />
           </div>
           <Button onClick={handleSave} disabled={saving} className="w-full">

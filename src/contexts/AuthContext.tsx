@@ -2,20 +2,20 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
-type UserRole = 'admin' | 'staff' | 'customer' | null;
+type UserRole = 'platform_admin' | 'business_admin' | 'staff' | 'customer' | null;
 
-interface OrgContext {
-  organizationId: string;
+interface BusinessContext {
+  businessId: string;
   role: UserRole;
-  orgName: string;
+  businessName: string;
 }
 
 interface AuthContextType {
   session: Session | null;
   user: User | null;
   loading: boolean;
-  orgContext: OrgContext | null;
-  setOrgContext: (ctx: OrgContext | null) => void;
+  businessContext: BusinessContext | null;
+  setBusinessContext: (ctx: BusinessContext | null) => void;
   signOut: () => Promise<void>;
 }
 
@@ -23,8 +23,8 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   user: null,
   loading: true,
-  orgContext: null,
-  setOrgContext: () => {},
+  businessContext: null,
+  setBusinessContext: () => {},
   signOut: async () => {},
 });
 
@@ -34,7 +34,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [orgContext, setOrgContext] = useState<OrgContext | null>(null);
+  const [businessContext, setBusinessContext] = useState<BusinessContext | null>(null);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -54,11 +54,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    setOrgContext(null);
+    setBusinessContext(null);
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, loading, orgContext, setOrgContext, signOut }}>
+    <AuthContext.Provider value={{ session, user, loading, businessContext, setBusinessContext, signOut }}>
       {children}
     </AuthContext.Provider>
   );

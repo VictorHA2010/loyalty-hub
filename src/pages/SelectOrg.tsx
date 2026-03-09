@@ -1,32 +1,31 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useOrganizations } from '@/hooks/useData';
+import { useUserBusinesses } from '@/hooks/useData';
 import { Skeleton } from '@/components/ui/skeleton';
 
-const SelectOrg = () => {
-  const { user, setOrgContext } = useAuth();
+const SelectBusiness = () => {
+  const { user, setBusinessContext } = useAuth();
   const navigate = useNavigate();
-  const { data: orgs, isLoading } = useOrganizations();
+  const { data: businesses, isLoading } = useUserBusinesses();
 
   useEffect(() => {
     if (!user) {
       navigate('/auth');
       return;
     }
-    // Auto-select if only one org
-    if (orgs && orgs.length === 1) {
-      const org = orgs[0];
-      const orgData = org.organizations as any;
-      setOrgContext({
-        organizationId: org.organization_id,
-        role: org.role as any,
-        orgName: orgData?.name || '',
+    if (businesses && businesses.length === 1) {
+      const b = businesses[0];
+      const biz = b.businesses as any;
+      setBusinessContext({
+        businessId: b.business_id,
+        role: b.role as any,
+        businessName: biz?.name || '',
       });
-      const route = org.role === 'admin' ? '/admin' : org.role === 'staff' ? '/staff' : '/dashboard';
+      const route = getRouteForRole(b.role);
       navigate(route);
     }
-  }, [orgs, user, navigate, setOrgContext]);
+  }, [businesses, user, navigate, setBusinessContext]);
 
   if (isLoading) {
     return (
@@ -40,27 +39,27 @@ const SelectOrg = () => {
     );
   }
 
-  if (!orgs || orgs.length === 0) {
+  if (!businesses || businesses.length === 0) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="text-center space-y-2">
-          <h1 className="text-xl font-semibold text-foreground">Sin organizaciones</h1>
+          <h1 className="text-xl font-semibold text-foreground">Sin negocios</h1>
           <p className="text-sm text-muted-foreground">
-            No perteneces a ninguna organización aún.
+            No perteneces a ningún negocio aún.
           </p>
         </div>
       </div>
     );
   }
 
-  const handleSelect = (org: any) => {
-    const orgData = org.organizations as any;
-    setOrgContext({
-      organizationId: org.organization_id,
-      role: org.role as any,
-      orgName: orgData?.name || '',
+  const handleSelect = (b: any) => {
+    const biz = b.businesses as any;
+    setBusinessContext({
+      businessId: b.business_id,
+      role: b.role as any,
+      businessName: biz?.name || '',
     });
-    const route = org.role === 'admin' ? '/admin' : org.role === 'staff' ? '/staff' : '/dashboard';
+    const route = getRouteForRole(b.role);
     navigate(route);
   };
 
@@ -68,20 +67,20 @@ const SelectOrg = () => {
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="w-full max-w-sm space-y-6 px-4">
         <h1 className="text-xl font-semibold text-center text-foreground">
-          Seleccionar organización
+          Seleccionar negocio
         </h1>
         <div className="space-y-2">
-          {orgs.map((org) => {
-            const orgData = org.organizations as any;
+          {businesses.map((b) => {
+            const biz = b.businesses as any;
             return (
               <button
-                key={org.organization_id}
-                onClick={() => handleSelect(org)}
+                key={b.business_id}
+                onClick={() => handleSelect(b)}
                 className="w-full rounded-md border border-border bg-card p-4 text-left transition-colors hover:bg-secondary"
               >
-                <p className="font-medium text-foreground">{orgData?.name}</p>
+                <p className="font-medium text-foreground">{biz?.name}</p>
                 <p className="text-xs font-mono text-muted-foreground mt-1">
-                  {org.role}
+                  {b.role}
                 </p>
               </button>
             );
@@ -92,4 +91,13 @@ const SelectOrg = () => {
   );
 };
 
-export default SelectOrg;
+function getRouteForRole(role: string): string {
+  switch (role) {
+    case 'platform_admin': return '/platform';
+    case 'business_admin': return '/admin';
+    case 'staff': return '/staff';
+    default: return '/dashboard';
+  }
+}
+
+export default SelectBusiness;

@@ -12,8 +12,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import AppLayout from '@/components/AppLayout';
 
 const AdminRewards = () => {
-  const { orgContext } = useAuth();
-  const { data: rewards, isLoading } = useAllRewards(orgContext?.organizationId);
+  const { businessContext } = useAuth();
+  const { data: rewards, isLoading } = useAllRewards(businessContext?.businessId);
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
@@ -38,7 +38,7 @@ const AdminRewards = () => {
         toast.success('Recompensa actualizada');
       } else {
         const { error } = await supabase.from('rewards').insert({
-          organization_id: orgContext!.organizationId,
+          business_id: businessContext!.businessId,
           name: form.name,
           description: form.description,
           points_cost: parseInt(form.points_cost),

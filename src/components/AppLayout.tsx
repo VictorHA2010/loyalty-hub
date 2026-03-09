@@ -5,12 +5,10 @@ import {
   LayoutDashboard,
   Gift,
   History,
-  User,
-  QrCode,
-  LogOut,
   Users,
   Settings,
-  Bell,
+  QrCode,
+  LogOut,
 } from 'lucide-react';
 
 interface NavItem {
@@ -38,7 +36,7 @@ interface AppLayoutProps {
 }
 
 const AppLayout = ({ children, role }: AppLayoutProps) => {
-  const { orgContext, signOut } = useAuth();
+  const { businessContext, signOut } = useAuth();
   const navigate = useNavigate();
   const navItems = role === 'admin' ? adminNav : staffNav;
 
@@ -49,11 +47,10 @@ const AppLayout = ({ children, role }: AppLayoutProps) => {
 
   return (
     <div className="flex min-h-screen bg-background">
-      {/* Sidebar — 240px, always visible on desktop */}
       <aside className="hidden lg:flex w-60 flex-col border-r border-border bg-sidebar">
         <div className="p-4 border-b border-border">
           <p className="text-sm font-semibold text-foreground truncate">
-            {orgContext?.orgName || 'Organización'}
+            {businessContext?.businessName || 'Negocio'}
           </p>
           <p className="text-xs font-mono text-muted-foreground mt-0.5">{role}</p>
         </div>
@@ -87,10 +84,9 @@ const AppLayout = ({ children, role }: AppLayoutProps) => {
         </div>
       </aside>
 
-      {/* Mobile header */}
       <div className="flex-1 flex flex-col">
         <header className="lg:hidden flex items-center justify-between border-b border-border px-4 py-3 bg-background">
-          <p className="text-sm font-semibold text-foreground">{orgContext?.orgName || 'Org'}</p>
+          <p className="text-sm font-semibold text-foreground">{businessContext?.businessName || 'Negocio'}</p>
           <div className="flex items-center gap-2">
             {navItems.map((item) => (
               <NavLink

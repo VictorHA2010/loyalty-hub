@@ -1,44 +1,22 @@
-import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useOrgMembers } from '@/hooks/useData';
+import { useBusinessMembers } from '@/hooks/useData';
 import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { Plus, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import AppLayout from '@/components/AppLayout';
 
 const AdminMembers = () => {
-  const { orgContext } = useAuth();
-  const { data: members, isLoading } = useOrgMembers(orgContext?.organizationId);
+  const { businessContext } = useAuth();
+  const { data: members, isLoading } = useBusinessMembers(businessContext?.businessId);
   const queryClient = useQueryClient();
-  const [showAdd, setShowAdd] = useState(false);
-  const [email, setEmail] = useState('');
-  const [role, setRole] = useState<'staff' | 'customer'>('staff');
-  const [adding, setAdding] = useState(false);
-
-  const handleAdd = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAdding(true);
-    try {
-      // Find user by email — we need to look up in profiles or auth
-      // Since we can't query auth.users directly, we'll inform the admin
-      toast.error('El usuario debe registrarse primero. Luego podrás agregarlo por su ID.');
-      // For now, this is a simplified flow
-    } catch (err: any) {
-      toast.error(err.message);
-    } finally {
-      setAdding(false);
-    }
-  };
 
   const handleRemove = async (id: string) => {
     try {
-      const { error } = await supabase.from('organization_users').delete().eq('id', id);
+      const { error } = await supabase.from('user_roles').delete().eq('id', id);
       if (error) throw error;
-      queryClient.invalidateQueries({ queryKey: ['org-members'] });
+      queryClient.invalidateQueries({ queryKey: ['business-members'] });
       toast.success('Miembro eliminado');
     } catch (err: any) {
       toast.error(err.message);
@@ -48,11 +26,11 @@ const AdminMembers = () => {
   const handleRoleChange = async (id: string, newRole: string) => {
     try {
       const { error } = await supabase
-        .from('organization_users')
+        .from('user_roles')
         .update({ role: newRole as any })
         .eq('id', id);
       if (error) throw error;
-      queryClient.invalidateQueries({ queryKey: ['org-members'] });
+      queryClient.invalidateQueries({ queryKey: ['business-members'] });
       toast.success('Rol actualizado');
     } catch (err: any) {
       toast.error(err.message);
@@ -89,7 +67,7 @@ const AdminMembers = () => {
                     onChange={(e) => handleRoleChange(m.id, e.target.value)}
                     className="text-xs rounded border border-input bg-background px-2 py-1 text-foreground"
                   >
-                    <option value="admin">admin</option>
+                    <option value="business_admin">business_admin</option>
                     <option value="staff">staff</option>
                     <option value="customer">customer</option>
                   </select>

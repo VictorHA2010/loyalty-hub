@@ -10,18 +10,18 @@ import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
 const CustomerDashboard = () => {
-  const { user, orgContext, signOut } = useAuth();
+  const { user, businessContext, signOut } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: profile, isLoading: profileLoading } = useProfile();
-  const { data: balance, isLoading: balanceLoading } = usePointsBalance(orgContext?.organizationId);
-  const { data: rewards, isLoading: rewardsLoading } = useRewards(orgContext?.organizationId);
-  const { data: history } = usePointsHistory(orgContext?.organizationId);
-  const { data: redemptions } = useRedemptions(orgContext?.organizationId);
+  const { data: balance, isLoading: balanceLoading } = usePointsBalance(businessContext?.businessId);
+  const { data: rewards, isLoading: rewardsLoading } = useRewards(businessContext?.businessId);
+  const { data: history } = usePointsHistory(businessContext?.businessId);
+  const { data: redemptions } = useRedemptions(businessContext?.businessId);
   const [tab, setTab] = useState<'rewards' | 'history' | 'profile'>('rewards');
   const [redeeming, setRedeeming] = useState<string | null>(null);
 
-  if (!orgContext) {
+  if (!businessContext) {
     navigate('/select-org');
     return null;
   }
@@ -33,22 +33,20 @@ const CustomerDashboard = () => {
     }
     setRedeeming(rewardId);
     try {
-      // Insert redemption
       const { error: redError } = await supabase.from('redemptions').insert({
-        organization_id: orgContext.organizationId,
+        business_id: businessContext.businessId,
         user_id: user!.id,
         reward_id: rewardId,
         status: 'pending',
       });
       if (redError) throw redError;
 
-      // Deduct points
       const { error: ptError } = await supabase.from('points_ledger').insert({
-        organization_id: orgContext.organizationId,
+        business_id: businessContext.businessId,
         user_id: user!.id,
         points: -cost,
         type: 'redeem',
-        source: 'reward_redemption',
+        note: 'reward_redemption',
       });
       if (ptError) throw ptError;
 
@@ -67,16 +65,13 @@ const CustomerDashboard = () => {
     navigate('/auth');
   };
 
-  const isLoading = profileLoading || balanceLoading;
-
   return (
     <div className="min-h-screen bg-background">
-      {/* Header with QR and Balance */}
       <div className="bg-card border-b border-border">
         <div className="max-w-lg mx-auto px-4 py-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <p className="text-xs text-muted-foreground font-mono">{orgContext.orgName}</p>
+              <p className="text-xs text-muted-foreground font-mono">{businessContext.businessName}</p>
               <h1 className="text-lg font-semibold text-foreground">
                 {profileLoading ? <Skeleton className="h-5 w-32" /> : (profile?.full_name || 'Usuario')}
               </h1>
@@ -86,7 +81,6 @@ const CustomerDashboard = () => {
             </button>
           </div>
 
-          {/* QR Code area */}
           <div className="flex items-center gap-4 p-4 border border-border rounded-md bg-background">
             <div className="flex-shrink-0 w-20 h-20 bg-secondary rounded-md flex items-center justify-center">
               <QrCode size={40} className="text-foreground" />
@@ -99,7 +93,6 @@ const CustomerDashboard = () => {
             </div>
           </div>
 
-          {/* Points balance */}
           <div className="mt-4 text-center">
             <p className="text-xs text-muted-foreground">Puntos disponibles</p>
             <p className="text-3xl font-semibold font-mono text-foreground">
@@ -109,7 +102,6 @@ const CustomerDashboard = () => {
         </div>
       </div>
 
-      {/* Tab navigation */}
       <div className="max-w-lg mx-auto">
         <div className="flex border-b border-border">
           {[
@@ -170,7 +162,7 @@ const CustomerDashboard = () => {
                 history.map((entry) => (
                   <div key={entry.id} className="flex items-center justify-between py-3 border-b border-border last:border-0">
                     <div>
-                      <p className="text-sm text-foreground">{entry.source || entry.type}</p>
+                      <p className="text-sm text-foreground">{entry.note || entry.type}</p>
                       <p className="text-xs font-mono text-muted-foreground">
                         {new Date(entry.created_at).toLocaleDateString()}
                       </p>
