@@ -1,5 +1,5 @@
 import { useAuth } from '@/contexts/AuthContext';
-import { useOrgRedemptions } from '@/hooks/useData';
+import { useBusinessRedemptions } from '@/hooks/useData';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -9,15 +9,15 @@ import { useQueryClient } from '@tanstack/react-query';
 import AppLayout from '@/components/AppLayout';
 
 const AdminRedemptions = () => {
-  const { orgContext } = useAuth();
-  const { data: redemptions, isLoading } = useOrgRedemptions(orgContext?.organizationId);
+  const { businessContext } = useAuth();
+  const { data: redemptions, isLoading } = useBusinessRedemptions(businessContext?.businessId);
   const queryClient = useQueryClient();
 
   const handleUpdate = async (id: string, status: 'approved' | 'rejected') => {
     try {
       const { error } = await supabase.from('redemptions').update({ status }).eq('id', id);
       if (error) throw error;
-      queryClient.invalidateQueries({ queryKey: ['org-redemptions'] });
+      queryClient.invalidateQueries({ queryKey: ['business-redemptions'] });
       toast.success(`Canje ${status === 'approved' ? 'aprobado' : 'rechazado'}`);
     } catch (err: any) {
       toast.error(err.message);

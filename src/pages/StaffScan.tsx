@@ -1,27 +1,23 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { useOrgRedemptions } from '@/hooks/useData';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { QrCode, Plus, Check, X } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
+import { QrCode, Plus, X } from 'lucide-react';
 import AppLayout from '@/components/AppLayout';
 
 const StaffScan = () => {
-  const { orgContext } = useAuth();
+  const { businessContext } = useAuth();
   const [qrToken, setQrToken] = useState('');
   const [scannedUser, setScannedUser] = useState<any>(null);
   const [scannedBalance, setScannedBalance] = useState<number>(0);
   const [pointsToAssign, setPointsToAssign] = useState('');
   const [assigning, setAssigning] = useState(false);
-  const queryClient = useQueryClient();
 
   const handleScan = async () => {
     if (!qrToken.trim()) return;
     try {
-      // Find user by qr_token
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
@@ -32,11 +28,10 @@ const StaffScan = () => {
         return;
       }
 
-      // Get balance
       const { data: points } = await supabase
         .from('points_ledger')
         .select('points')
-        .eq('organization_id', orgContext!.organizationId)
+        .eq('business_id', businessContext!.businessId)
         .eq('user_id', profile.id);
 
       const balance = (points || []).reduce((sum, r) => sum + r.points, 0);
@@ -53,11 +48,11 @@ const StaffScan = () => {
     setAssigning(true);
     try {
       const { error } = await supabase.from('points_ledger').insert({
-        organization_id: orgContext!.organizationId,
+        business_id: businessContext!.businessId,
         user_id: scannedUser.id,
         points: pts,
         type: 'earn',
-        source: 'staff_assignment',
+        note: 'staff_assignment',
       });
       if (error) throw error;
       setScannedBalance((prev) => prev + pts);
@@ -94,9 +89,8 @@ const StaffScan = () => {
             </Button>
           </div>
 
-          {/* Scanned user overlay — "identity merge" */}
           {scannedUser && (
-            <div className="animate-slide-up border border-border rounded-md bg-card p-4 space-y-4">
+            <div className="border border-border rounded-md bg-card p-4 space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center overflow-hidden">

@@ -2,14 +2,14 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
-export function useOrganizations() {
+export function useUserBusinesses() {
   const { user } = useAuth();
   return useQuery({
-    queryKey: ['organizations', user?.id],
+    queryKey: ['user-businesses', user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('organization_users')
-        .select('organization_id, role, organizations(id, name, slug, active)')
+        .from('user_roles')
+        .select('business_id, role, businesses(id, name, slug, logo_url)')
         .eq('user_id', user!.id);
       if (error) throw error;
       return data;
@@ -35,140 +35,140 @@ export function useProfile() {
   });
 }
 
-export function usePointsBalance(organizationId: string | undefined) {
+export function usePointsBalance(businessId: string | undefined) {
   const { user } = useAuth();
   return useQuery({
-    queryKey: ['points-balance', organizationId, user?.id],
+    queryKey: ['points-balance', businessId, user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('points_ledger')
         .select('points')
-        .eq('organization_id', organizationId!)
+        .eq('business_id', businessId!)
         .eq('user_id', user!.id);
       if (error) throw error;
       return (data || []).reduce((sum, row) => sum + row.points, 0);
     },
-    enabled: !!user && !!organizationId,
+    enabled: !!user && !!businessId,
   });
 }
 
-export function useRewards(organizationId: string | undefined) {
+export function useRewards(businessId: string | undefined) {
   return useQuery({
-    queryKey: ['rewards', organizationId],
+    queryKey: ['rewards', businessId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('rewards')
         .select('*')
-        .eq('organization_id', organizationId!)
+        .eq('business_id', businessId!)
         .eq('active', true)
         .order('points_cost', { ascending: true });
       if (error) throw error;
       return data;
     },
-    enabled: !!organizationId,
+    enabled: !!businessId,
   });
 }
 
-export function useAllRewards(organizationId: string | undefined) {
+export function useAllRewards(businessId: string | undefined) {
   return useQuery({
-    queryKey: ['all-rewards', organizationId],
+    queryKey: ['all-rewards', businessId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('rewards')
         .select('*')
-        .eq('organization_id', organizationId!)
+        .eq('business_id', businessId!)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!organizationId,
+    enabled: !!businessId,
   });
 }
 
-export function usePointsHistory(organizationId: string | undefined) {
+export function usePointsHistory(businessId: string | undefined) {
   const { user } = useAuth();
   return useQuery({
-    queryKey: ['points-history', organizationId, user?.id],
+    queryKey: ['points-history', businessId, user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('points_ledger')
         .select('*')
-        .eq('organization_id', organizationId!)
+        .eq('business_id', businessId!)
         .eq('user_id', user!.id)
         .order('created_at', { ascending: false })
         .limit(50);
       if (error) throw error;
       return data;
     },
-    enabled: !!user && !!organizationId,
+    enabled: !!user && !!businessId,
   });
 }
 
-export function useRedemptions(organizationId: string | undefined) {
+export function useRedemptions(businessId: string | undefined) {
   const { user } = useAuth();
   return useQuery({
-    queryKey: ['redemptions', organizationId, user?.id],
+    queryKey: ['redemptions', businessId, user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('redemptions')
         .select('*, rewards(name, points_cost)')
-        .eq('organization_id', organizationId!)
+        .eq('business_id', businessId!)
         .eq('user_id', user!.id)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!user && !!organizationId,
+    enabled: !!user && !!businessId,
   });
 }
 
-export function useOrgRedemptions(organizationId: string | undefined) {
+export function useBusinessRedemptions(businessId: string | undefined) {
   return useQuery({
-    queryKey: ['org-redemptions', organizationId],
+    queryKey: ['business-redemptions', businessId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('redemptions')
         .select('*, rewards(name, points_cost), profiles(full_name)')
-        .eq('organization_id', organizationId!)
+        .eq('business_id', businessId!)
         .order('created_at', { ascending: false })
         .limit(100);
       if (error) throw error;
       return data;
     },
-    enabled: !!organizationId,
+    enabled: !!businessId,
   });
 }
 
-export function useOrgMembers(organizationId: string | undefined) {
+export function useBusinessMembers(businessId: string | undefined) {
   return useQuery({
-    queryKey: ['org-members', organizationId],
+    queryKey: ['business-members', businessId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('organization_users')
+        .from('user_roles')
         .select('*, profiles(full_name, avatar_url, phone)')
-        .eq('organization_id', organizationId!)
+        .eq('business_id', businessId!)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!organizationId,
+    enabled: !!businessId,
   });
 }
 
-export function useOrgActivity(organizationId: string | undefined) {
+export function useBusinessActivity(businessId: string | undefined) {
   return useQuery({
-    queryKey: ['org-activity', organizationId],
+    queryKey: ['business-activity', businessId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('points_ledger')
         .select('*, profiles(full_name)')
-        .eq('organization_id', organizationId!)
+        .eq('business_id', businessId!)
         .order('created_at', { ascending: false })
         .limit(20);
       if (error) throw error;
       return data;
     },
-    enabled: !!organizationId,
+    enabled: !!businessId,
   });
 }
 
@@ -187,21 +187,5 @@ export function useNotifications() {
       return data;
     },
     enabled: !!user,
-  });
-}
-
-export function useOrgSettings(organizationId: string | undefined) {
-  return useQuery({
-    queryKey: ['org-settings', organizationId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('organization_settings')
-        .select('*')
-        .eq('organization_id', organizationId!)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!organizationId,
   });
 }

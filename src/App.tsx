@@ -4,7 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import AuthPage from "./pages/AuthPage";
-import SelectOrg from "./pages/SelectOrg";
+import SelectBusiness from "./pages/SelectOrg";
 import CustomerDashboard from "./pages/CustomerDashboard";
 import StaffScan from "./pages/StaffScan";
 import StaffRedemptions from "./pages/StaffRedemptions";
@@ -27,7 +27,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   if (loading) return <div className="flex min-h-screen items-center justify-center bg-background"><p className="text-sm text-muted-foreground">Cargando...</p></div>;
-  if (user) return <Navigate to="/select-org" replace />;
+  if (user) return <Navigate to="/select-business" replace />;
   return <>{children}</>;
 }
 
@@ -40,7 +40,8 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Navigate to="/auth" replace />} />
             <Route path="/auth" element={<PublicRoute><AuthPage /></PublicRoute>} />
-            <Route path="/select-org" element={<ProtectedRoute><SelectOrg /></ProtectedRoute>} />
+            <Route path="/select-business" element={<ProtectedRoute><SelectBusiness /></ProtectedRoute>} />
+            <Route path="/select-org" element={<Navigate to="/select-business" replace />} />
             <Route path="/dashboard" element={<ProtectedRoute><CustomerDashboard /></ProtectedRoute>} />
             <Route path="/staff" element={<ProtectedRoute><StaffScan /></ProtectedRoute>} />
             <Route path="/staff/redemptions" element={<ProtectedRoute><StaffRedemptions /></ProtectedRoute>} />

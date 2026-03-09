@@ -1,11 +1,11 @@
 import { useAuth } from '@/contexts/AuthContext';
-import { useOrgActivity } from '@/hooks/useData';
+import { useBusinessActivity } from '@/hooks/useData';
 import { Skeleton } from '@/components/ui/skeleton';
 import AppLayout from '@/components/AppLayout';
 
 const AdminActivity = () => {
-  const { orgContext } = useAuth();
-  const { data: activity, isLoading } = useOrgActivity(orgContext?.organizationId);
+  const { businessContext } = useAuth();
+  const { data: activity, isLoading } = useBusinessActivity(businessContext?.businessId);
 
   return (
     <AppLayout role="admin">
@@ -24,7 +24,7 @@ const AdminActivity = () => {
                   <p className="text-sm text-foreground">
                     <span className="font-medium">{(entry.profiles as any)?.full_name || 'Usuario'}</span>
                     {' — '}
-                    {entry.source || entry.type}
+                    {entry.note || entry.type}
                   </p>
                   <p className="text-xs font-mono text-muted-foreground">
                     {new Date(entry.created_at).toLocaleString()}

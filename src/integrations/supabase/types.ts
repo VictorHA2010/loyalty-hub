@@ -14,84 +14,303 @@ export type Database = {
   }
   public: {
     Tables: {
+      businesses: {
+        Row: {
+          created_at: string
+          id: string
+          logo_url: string | null
+          name: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          name: string
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          name?: string
+          slug?: string
+        }
+        Relationships: []
+      }
+      coupon_redemptions: {
+        Row: {
+          business_id: string
+          coupon_id: string
+          id: string
+          redeemed_at: string
+          user_id: string
+        }
+        Insert: {
+          business_id: string
+          coupon_id: string
+          id?: string
+          redeemed_at?: string
+          user_id: string
+        }
+        Update: {
+          business_id?: string
+          coupon_id?: string
+          id?: string
+          redeemed_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupon_redemptions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_redemptions_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_redemptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coupons: {
         Row: {
           active: boolean
+          business_id: string
           code: string
           created_at: string
           description: string | null
           discount_type: string
           discount_value: number
           id: string
-          organization_id: string
         }
         Insert: {
           active?: boolean
+          business_id: string
           code: string
           created_at?: string
           description?: string | null
           discount_type: string
           discount_value: number
           id?: string
-          organization_id: string
         }
         Update: {
           active?: boolean
+          business_id?: string
           code?: string
           created_at?: string
           description?: string | null
           discount_type?: string
           discount_value?: number
           id?: string
-          organization_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "coupons_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "coupons_business_id_fkey"
+            columns: ["business_id"]
             isOneToOne: false
-            referencedRelation: "organizations"
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_businesses: {
+        Row: {
+          business_id: string
+          id: string
+          joined_at: string
+          user_id: string
+        }
+        Insert: {
+          business_id: string
+          id?: string
+          joined_at?: string
+          user_id: string
+        }
+        Update: {
+          business_id?: string
+          id?: string
+          joined_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_businesses_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_businesses_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      legal_acceptances: {
+        Row: {
+          accepted_at: string
+          document_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string
+          document_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string
+          document_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legal_acceptances_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "legal_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_acceptances_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      legal_documents: {
+        Row: {
+          active: boolean
+          business_id: string
+          content: string
+          id: string
+          type: string
+          updated_at: string
+          version: string
+        }
+        Insert: {
+          active?: boolean
+          business_id: string
+          content: string
+          id?: string
+          type: string
+          updated_at?: string
+          version: string
+        }
+        Update: {
+          active?: boolean
+          business_id?: string
+          content?: string
+          id?: string
+          type?: string
+          updated_at?: string
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legal_documents_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      locations: {
+        Row: {
+          address: string | null
+          business_id: string
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          address?: string | null
+          business_id: string
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          address?: string | null
+          business_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "locations_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
         ]
       }
       memberships: {
         Row: {
+          business_id: string
           created_at: string
-          end_date: string | null
+          ends_at: string | null
           id: string
-          organization_id: string
-          start_date: string
+          plan_name: string | null
+          started_at: string | null
           status: string
-          tier: string
           user_id: string
         }
         Insert: {
+          business_id: string
           created_at?: string
-          end_date?: string | null
+          ends_at?: string | null
           id?: string
-          organization_id: string
-          start_date?: string
+          plan_name?: string | null
+          started_at?: string | null
           status?: string
-          tier?: string
           user_id: string
         }
         Update: {
+          business_id?: string
           created_at?: string
-          end_date?: string | null
+          ends_at?: string | null
           id?: string
-          organization_id?: string
-          start_date?: string
+          plan_name?: string | null
+          started_at?: string | null
           status?: string
-          tier?: string
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "memberships_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "memberships_business_id_fkey"
+            columns: ["business_id"]
             isOneToOne: false
-            referencedRelation: "organizations"
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "memberships_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -99,175 +318,99 @@ export type Database = {
       notifications: {
         Row: {
           body: string | null
+          business_id: string
           created_at: string
           id: string
-          organization_id: string
           read: boolean
           title: string
           user_id: string
         }
         Insert: {
           body?: string | null
+          business_id: string
           created_at?: string
           id?: string
-          organization_id: string
           read?: boolean
           title: string
           user_id: string
         }
         Update: {
           body?: string | null
+          business_id?: string
           created_at?: string
           id?: string
-          organization_id?: string
           read?: boolean
           title?: string
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "notifications_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "notifications_business_id_fkey"
+            columns: ["business_id"]
             isOneToOne: false
-            referencedRelation: "organizations"
+            referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
-        ]
-      }
-      organization_settings: {
-        Row: {
-          accent_color: string | null
-          brand_name: string | null
-          created_at: string
-          logo_url: string | null
-          organization_id: string
-          primary_color: string | null
-          secondary_color: string | null
-          updated_at: string
-        }
-        Insert: {
-          accent_color?: string | null
-          brand_name?: string | null
-          created_at?: string
-          logo_url?: string | null
-          organization_id: string
-          primary_color?: string | null
-          secondary_color?: string | null
-          updated_at?: string
-        }
-        Update: {
-          accent_color?: string | null
-          brand_name?: string | null
-          created_at?: string
-          logo_url?: string | null
-          organization_id?: string
-          primary_color?: string | null
-          secondary_color?: string | null
-          updated_at?: string
-        }
-        Relationships: [
           {
-            foreignKeyName: "organization_settings_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: true
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      organization_users: {
-        Row: {
-          created_at: string
-          id: string
-          organization_id: string
-          role: Database["public"]["Enums"]["app_role"]
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          organization_id: string
-          role?: Database["public"]["Enums"]["app_role"]
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          organization_id?: string
-          role?: Database["public"]["Enums"]["app_role"]
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "organization_users_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
-            referencedRelation: "organizations"
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
-      }
-      organizations: {
-        Row: {
-          active: boolean
-          created_at: string
-          id: string
-          name: string
-          slug: string
-        }
-        Insert: {
-          active?: boolean
-          created_at?: string
-          id?: string
-          name: string
-          slug: string
-        }
-        Update: {
-          active?: boolean
-          created_at?: string
-          id?: string
-          name?: string
-          slug?: string
-        }
-        Relationships: []
       }
       points_ledger: {
         Row: {
+          business_id: string
           created_at: string
-          earned_on: string | null
           id: string
-          organization_id: string
+          location_id: string | null
+          note: string | null
           points: number
-          source: string | null
           type: string
           user_id: string
         }
         Insert: {
+          business_id: string
           created_at?: string
-          earned_on?: string | null
           id?: string
-          organization_id: string
+          location_id?: string | null
+          note?: string | null
           points: number
-          source?: string | null
           type: string
           user_id: string
         }
         Update: {
+          business_id?: string
           created_at?: string
-          earned_on?: string | null
           id?: string
-          organization_id?: string
+          location_id?: string | null
+          note?: string | null
           points?: number
-          source?: string | null
           type?: string
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "points_ledger_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "points_ledger_business_id_fkey"
+            columns: ["business_id"]
             isOneToOne: false
-            referencedRelation: "organizations"
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "points_ledger_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "points_ledger_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -276,6 +419,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          email: string | null
           full_name: string | null
           id: string
           phone: string | null
@@ -284,6 +428,7 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          email?: string | null
           full_name?: string | null
           id: string
           phone?: string | null
@@ -292,6 +437,7 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string
+          email?: string | null
           full_name?: string | null
           id?: string
           phone?: string | null
@@ -301,35 +447,35 @@ export type Database = {
       }
       redemptions: {
         Row: {
+          business_id: string
           created_at: string
           id: string
-          organization_id: string
           reward_id: string
           status: string
           user_id: string
         }
         Insert: {
+          business_id: string
           created_at?: string
           id?: string
-          organization_id: string
           reward_id: string
           status?: string
           user_id: string
         }
         Update: {
+          business_id?: string
           created_at?: string
           id?: string
-          organization_id?: string
           reward_id?: string
           status?: string
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "redemptions_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "redemptions_business_id_fkey"
+            columns: ["business_id"]
             isOneToOne: false
-            referencedRelation: "organizations"
+            referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
           {
@@ -339,31 +485,38 @@ export type Database = {
             referencedRelation: "rewards"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "redemptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       referrals: {
         Row: {
+          business_id: string
           created_at: string
           id: string
-          organization_id: string
           referral_code: string
           referred_user_id: string | null
           referrer_user_id: string
           status: string
         }
         Insert: {
+          business_id: string
           created_at?: string
           id?: string
-          organization_id: string
           referral_code: string
           referred_user_id?: string | null
           referrer_user_id: string
           status?: string
         }
         Update: {
+          business_id?: string
           created_at?: string
           id?: string
-          organization_id?: string
           referral_code?: string
           referred_user_id?: string | null
           referrer_user_id?: string
@@ -371,10 +524,24 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "referrals_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "referrals_business_id_fkey"
+            columns: ["business_id"]
             isOneToOne: false
-            referencedRelation: "organizations"
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_referred_user_id_fkey"
+            columns: ["referred_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_referrer_user_id_fkey"
+            columns: ["referrer_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -382,40 +549,69 @@ export type Database = {
       rewards: {
         Row: {
           active: boolean
+          business_id: string
           created_at: string
           description: string | null
           id: string
-          image_url: string | null
           name: string
-          organization_id: string
           points_cost: number
         }
         Insert: {
           active?: boolean
+          business_id: string
           created_at?: string
           description?: string | null
           id?: string
-          image_url?: string | null
           name: string
-          organization_id: string
           points_cost: number
         }
         Update: {
           active?: boolean
+          business_id?: string
           created_at?: string
           description?: string | null
           id?: string
-          image_url?: string | null
           name?: string
-          organization_id?: string
           points_cost?: number
         }
         Relationships: [
           {
-            foreignKeyName: "rewards_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "rewards_business_id_fkey"
+            columns: ["business_id"]
             isOneToOne: false
-            referencedRelation: "organizations"
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
         ]
@@ -425,22 +621,23 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      get_user_org_ids: { Args: { _user_id: string }; Returns: string[] }
-      has_org_role: {
+      get_user_business_ids: { Args: { _user_id: string }; Returns: string[] }
+      has_business_role: {
         Args: {
-          _org_id: string
+          _business_id: string
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
       }
-      is_org_member: {
-        Args: { _org_id: string; _user_id: string }
+      is_business_member: {
+        Args: { _business_id: string; _user_id: string }
         Returns: boolean
       }
+      is_platform_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "staff" | "customer"
+      app_role: "platform_admin" | "business_admin" | "staff" | "customer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -568,7 +765,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "staff", "customer"],
+      app_role: ["platform_admin", "business_admin", "staff", "customer"],
     },
   },
 } as const
