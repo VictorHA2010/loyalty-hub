@@ -22,7 +22,7 @@ const CustomerDashboard = () => {
   const [redeeming, setRedeeming] = useState<string | null>(null);
 
   if (!businessContext) {
-    navigate('/select-org');
+    navigate('/select-business');
     return null;
   }
 
@@ -62,7 +62,7 @@ const CustomerDashboard = () => {
 
   const handleSignOut = async () => {
     await signOut();
-    navigate('/auth');
+    navigate('/login');
   };
 
   return (
