@@ -337,3 +337,40 @@ export function useCustomerPointsBalance(businessId: string | undefined, userId:
     enabled: !!businessId && !!userId,
   });
 }
+
+// Business coupons (active)
+export function useBusinessCoupons(businessId: string | undefined) {
+  return useQuery({
+    queryKey: ['business-coupons', businessId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('coupons')
+        .select('*')
+        .eq('business_id', businessId!)
+        .eq('active', true)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!businessId,
+  });
+}
+
+// Customer referrals
+export function useCustomerReferrals(businessId: string | undefined) {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['customer-referrals', businessId, user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('referrals')
+        .select('*')
+        .eq('business_id', businessId!)
+        .eq('referrer_user_id', user!.id)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user && !!businessId,
+  });
+}
