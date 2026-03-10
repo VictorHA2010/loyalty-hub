@@ -8,6 +8,11 @@ interface Business {
   slug: string;
   logo_url: string | null;
   active: boolean;
+  primary_color: string | null;
+  secondary_color: string | null;
+  welcome_message: string | null;
+  short_description: string | null;
+  business_type: string | null;
 }
 
 interface BusinessContextType {
