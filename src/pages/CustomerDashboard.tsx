@@ -4,6 +4,7 @@ import { useBusiness } from '@/contexts/BusinessContext';
 import {
   useProfile, usePointsBalance, useRewards, usePointsHistory,
   useRedemptions, useCustomerMembership, useBusinessCoupons, useCustomerReferrals,
+  useBonusPointsBalance,
 } from '@/hooks/useData';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,7 @@ const CustomerDashboard = () => {
   const { data: membership } = useCustomerMembership(businessId);
   const { data: coupons } = useBusinessCoupons(businessId);
   const { data: referrals } = useCustomerReferrals(businessId);
+  const { data: bonusBalance, isLoading: bonusLoading } = useBonusPointsBalance(businessId);
   const [tab, setTab] = useState<TabKey>('home');
   const [redeeming, setRedeeming] = useState<string | null>(null);
 
@@ -187,6 +189,8 @@ const CustomerDashboard = () => {
           <HomeTab
             balance={balance}
             balanceLoading={balanceLoading}
+            bonusBalance={bonusBalance}
+            bonusLoading={bonusLoading}
             membership={membership}
             profile={profile}
             businessName={business.name}
@@ -214,7 +218,7 @@ const CustomerDashboard = () => {
 };
 
 /* ═══════════════════════════════════════════ HOME TAB ═══════════════════════════════════════════ */
-function HomeTab({ balance, balanceLoading, membership, profile, businessName, onNavigate }: any) {
+function HomeTab({ balance, balanceLoading, bonusBalance, bonusLoading, membership, profile, businessName, onNavigate }: any) {
   return (
     <div className="space-y-5">
       {/* Points Card */}
@@ -232,6 +236,24 @@ function HomeTab({ balance, balanceLoading, membership, profile, businessName, o
             </span>
           </div>
         )}
+      </div>
+
+      {/* Bonus Points Card */}
+      <div className="rounded-xl border border-border bg-card p-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+            <Gift size={18} className="text-primary" />
+          </div>
+          <div className="flex-1">
+            <p className="text-xs text-muted-foreground">Puntos de regalo</p>
+            <p className="text-xl font-bold font-mono text-foreground">
+              {bonusLoading ? <Skeleton className="h-6 w-12 inline-block" /> : (bonusBalance ?? 0)}
+            </p>
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground mt-2">
+          Puntos extra que has recibido por promociones, membresía o bonos especiales. Cuentan para canjear recompensas.
+        </p>
       </div>
 
       {/* Quick Actions */}
@@ -543,22 +565,39 @@ function HistoryTab({ history, redemptions }: { history: any; redemptions: any }
         <p className="text-xs text-muted-foreground mb-3">Movimientos de puntos</p>
         {history && history.length > 0 ? (
           <div className="space-y-0 border border-border rounded-lg bg-card overflow-hidden">
-            {history.map((entry: any, i: number) => (
-              <div
-                key={entry.id}
-                className={`flex items-center justify-between px-4 py-3 ${i < history.length - 1 ? 'border-b border-border' : ''}`}
-              >
-                <div>
-                  <p className="text-sm text-foreground">{entry.note || entry.type}</p>
-                  <p className="text-xs font-mono text-muted-foreground">
-                    {new Date(entry.created_at).toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' })}
+            {history.map((entry: any, i: number) => {
+              const typeLabel = entry.type === 'bonus' ? '🎁 Regalo'
+                : entry.type === 'earn' ? '➕ Ganados'
+                : entry.type === 'redeem' ? '🎟️ Canje'
+                : entry.type === 'adjustment' ? '📝 Ajuste'
+                : entry.type === 'deduction' ? '📝 Deducción'
+                : entry.type;
+              return (
+                <div
+                  key={entry.id}
+                  className={`flex items-center justify-between px-4 py-3 ${i < history.length - 1 ? 'border-b border-border' : ''}`}
+                >
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${
+                        entry.type === 'bonus' ? 'bg-primary/10 text-primary'
+                        : entry.type === 'redeem' ? 'bg-destructive/10 text-destructive'
+                        : 'bg-secondary text-muted-foreground'
+                      }`}>
+                        {typeLabel}
+                      </span>
+                    </div>
+                    <p className="text-sm text-foreground mt-1">{entry.note || entry.type}</p>
+                    <p className="text-xs font-mono text-muted-foreground">
+                      {new Date(entry.created_at).toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </p>
+                  </div>
+                  <p className={`text-sm font-mono font-semibold ${entry.points >= 0 ? 'text-foreground' : 'text-destructive'}`}>
+                    {entry.points >= 0 ? '+' : ''}{entry.points}
                   </p>
                 </div>
-                <p className={`text-sm font-mono font-semibold ${entry.points >= 0 ? 'text-foreground' : 'text-destructive'}`}>
-                  {entry.points >= 0 ? '+' : ''}{entry.points}
-                </p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="text-center py-8">
