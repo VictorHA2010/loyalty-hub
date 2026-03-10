@@ -189,6 +189,8 @@ const CustomerDashboard = () => {
           <HomeTab
             balance={balance}
             balanceLoading={balanceLoading}
+            bonusBalance={bonusBalance}
+            bonusLoading={bonusLoading}
             membership={membership}
             profile={profile}
             businessName={business.name}
