@@ -4,6 +4,7 @@ import { useBusiness } from '@/contexts/BusinessContext';
 import {
   useProfile, usePointsBalance, useRewards, usePointsHistory,
   useRedemptions, useCustomerMembership, useBusinessCoupons, useCustomerReferrals,
+  useBonusPointsBalance,
 } from '@/hooks/useData';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
