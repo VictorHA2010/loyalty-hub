@@ -373,6 +373,67 @@ export function useBusinessCoupons(businessId: string | undefined) {
   });
 }
 
+// Bonus points balance for current user in a business
+export function useBonusPointsBalance(businessId: string | undefined) {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['bonus-points-balance', businessId, user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('points_ledger')
+        .select('points')
+        .eq('business_id', businessId!)
+        .eq('user_id', user!.id)
+        .eq('type', 'bonus');
+      if (error) throw error;
+      return (data || []).reduce((sum, row) => sum + row.points, 0);
+    },
+    enabled: !!user && !!businessId,
+  });
+}
+
+// Admin: bonus points metrics for dashboard
+export function useBonusPointsMetrics(businessId: string | undefined) {
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayISO = todayStart.toISOString();
+
+  const bonusToday = useQuery({
+    queryKey: ['admin-bonus-today', businessId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('points_ledger')
+        .select('points')
+        .eq('business_id', businessId!)
+        .eq('type', 'bonus')
+        .gte('created_at', todayISO);
+      if (error) throw error;
+      return (data || []).reduce((sum, r) => sum + r.points, 0);
+    },
+    enabled: !!businessId,
+  });
+
+  const bonusTotal = useQuery({
+    queryKey: ['admin-bonus-total', businessId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('points_ledger')
+        .select('points')
+        .eq('business_id', businessId!)
+        .eq('type', 'bonus');
+      if (error) throw error;
+      return (data || []).reduce((sum, r) => sum + r.points, 0);
+    },
+    enabled: !!businessId,
+  });
+
+  return {
+    bonusToday: bonusToday.data ?? 0,
+    bonusTotal: bonusTotal.data ?? 0,
+    isLoading: bonusToday.isLoading || bonusTotal.isLoading,
+  };
+}
+
 // Customer referrals
 export function useCustomerReferrals(businessId: string | undefined) {
   const { user } = useAuth();
