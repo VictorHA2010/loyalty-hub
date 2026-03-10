@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { BusinessProvider } from "@/contexts/BusinessContext";
+import BusinessRoleGuard from "@/components/BusinessRoleGuard";
 import AuthPage from "./pages/AuthPage";
 import BusinessAuthPage from "./pages/BusinessAuthPage";
 import ResetPassword from "./pages/ResetPassword";
@@ -81,19 +82,19 @@ const App = () => (
             <Route path="/b/:slug/login" element={<BusinessProvider><BusinessAuthPage /></BusinessProvider>} />
             <Route path="/b/:slug/app" element={<BusinessProvider><CustomerDashboard /></BusinessProvider>} />
 
-            {/* Admin routes by slug */}
-            <Route path="/admin/:slug" element={<BusinessProvider><AdminDashboard /></BusinessProvider>} />
-            <Route path="/admin/:slug/rewards" element={<BusinessProvider><AdminRewards /></BusinessProvider>} />
-            <Route path="/admin/:slug/staff" element={<BusinessProvider><AdminStaff /></BusinessProvider>} />
-            <Route path="/admin/:slug/members" element={<BusinessProvider><AdminMembers /></BusinessProvider>} />
-            <Route path="/admin/:slug/customers" element={<BusinessProvider><AdminCustomers /></BusinessProvider>} />
-            <Route path="/admin/:slug/memberships" element={<BusinessProvider><AdminMemberships /></BusinessProvider>} />
-            <Route path="/admin/:slug/redemptions" element={<BusinessProvider><AdminRedemptions /></BusinessProvider>} />
-            <Route path="/admin/:slug/loyalty" element={<BusinessProvider><AdminLoyaltySettings /></BusinessProvider>} />
-            <Route path="/admin/:slug/settings" element={<BusinessProvider><AdminSettings /></BusinessProvider>} />
+            {/* Admin routes by slug — guarded by role */}
+            <Route path="/admin/:slug" element={<BusinessProvider><BusinessRoleGuard allowed={['business_admin']}><AdminDashboard /></BusinessRoleGuard></BusinessProvider>} />
+            <Route path="/admin/:slug/rewards" element={<BusinessProvider><BusinessRoleGuard allowed={['business_admin']}><AdminRewards /></BusinessRoleGuard></BusinessProvider>} />
+            <Route path="/admin/:slug/staff" element={<BusinessProvider><BusinessRoleGuard allowed={['business_admin']}><AdminStaff /></BusinessRoleGuard></BusinessProvider>} />
+            <Route path="/admin/:slug/members" element={<BusinessProvider><BusinessRoleGuard allowed={['business_admin']}><AdminMembers /></BusinessRoleGuard></BusinessProvider>} />
+            <Route path="/admin/:slug/customers" element={<BusinessProvider><BusinessRoleGuard allowed={['business_admin']}><AdminCustomers /></BusinessRoleGuard></BusinessProvider>} />
+            <Route path="/admin/:slug/memberships" element={<BusinessProvider><BusinessRoleGuard allowed={['business_admin']}><AdminMemberships /></BusinessRoleGuard></BusinessProvider>} />
+            <Route path="/admin/:slug/redemptions" element={<BusinessProvider><BusinessRoleGuard allowed={['business_admin']}><AdminRedemptions /></BusinessRoleGuard></BusinessProvider>} />
+            <Route path="/admin/:slug/loyalty" element={<BusinessProvider><BusinessRoleGuard allowed={['business_admin']}><AdminLoyaltySettings /></BusinessRoleGuard></BusinessProvider>} />
+            <Route path="/admin/:slug/settings" element={<BusinessProvider><BusinessRoleGuard allowed={['business_admin']}><AdminSettings /></BusinessRoleGuard></BusinessProvider>} />
 
-            {/* Staff routes by slug */}
-            <Route path="/staff/:slug" element={<BusinessProvider><StaffDashboard /></BusinessProvider>} />
+            {/* Staff routes by slug — guarded by role */}
+            <Route path="/staff/:slug" element={<BusinessProvider><BusinessRoleGuard allowed={['staff', 'business_admin']}><StaffDashboard /></BusinessRoleGuard></BusinessProvider>} />
 
             {/* Legacy redirects */}
             <Route path="/admin" element={<Navigate to="/select-business" replace />} />
