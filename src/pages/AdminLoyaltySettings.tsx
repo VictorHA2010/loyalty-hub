@@ -61,22 +61,35 @@ const AdminLoyaltySettings = () => {
   return (
     <AppLayout role="admin">
       <div className="max-w-lg">
-        <h1 className="text-xl font-semibold text-foreground mb-6">Reglas de puntos</h1>
-        <div className="space-y-4">
+        <h1 className="text-xl font-semibold text-foreground mb-2">Reglas de puntos</h1>
+        <p className="text-sm text-muted-foreground mb-6">Configura cómo se emiten los puntos y los bonos de regalo en tu negocio.</p>
+        <div className="space-y-5">
           <div className="space-y-1">
             <Label>Puntos base por compra</Label>
             <Input type="number" value={form.base_points_per_purchase} onChange={(e) => setForm({ ...form, base_points_per_purchase: e.target.value })} min={1} />
-            <p className="text-xs text-muted-foreground">Puntos que recibe el cliente por cada compra.</p>
+            <p className="text-xs text-muted-foreground">Puntos que recibe el cliente por cada compra registrada por el staff.</p>
           </div>
-          <div className="space-y-1">
-            <Label>Puntos gratis / promocionales</Label>
-            <Input type="number" value={form.free_bonus_points} onChange={(e) => setForm({ ...form, free_bonus_points: e.target.value })} min={0} />
-            <p className="text-xs text-muted-foreground">Puntos extra promocionales que se agregan automáticamente.</p>
+          <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-sm font-medium text-foreground">🎁 Puntos de regalo (Bonus)</span>
+            </div>
+            <div className="space-y-1">
+              <Label>Puntos de regalo por transacción</Label>
+              <Input type="number" value={form.free_bonus_points} onChange={(e) => setForm({ ...form, free_bonus_points: e.target.value })} min={0} />
+              <p className="text-xs text-muted-foreground">
+                Puntos extra que se entregan automáticamente como regalo cada vez que el staff asigna puntos a un cliente. Se registran como tipo "bonus" en el historial.
+              </p>
+            </div>
           </div>
-          <div className="space-y-1">
-            <Label>Multiplicador de membresía Plus</Label>
-            <Input type="number" step="0.1" value={form.membership_points_multiplier} onChange={(e) => setForm({ ...form, membership_points_multiplier: e.target.value })} min={1} />
-            <p className="text-xs text-muted-foreground">Los clientes Plus reciben puntos × este multiplicador.</p>
+          <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-sm font-medium text-foreground">⭐ Membresía Plus</span>
+            </div>
+            <div className="space-y-1">
+              <Label>Multiplicador de puntos para miembros Plus</Label>
+              <Input type="number" step="0.1" value={form.membership_points_multiplier} onChange={(e) => setForm({ ...form, membership_points_multiplier: e.target.value })} min={1} />
+              <p className="text-xs text-muted-foreground">Los clientes con membresía Plus reciben puntos base × este multiplicador. Ejemplo: 2 = doble de puntos.</p>
+            </div>
           </div>
           <Button onClick={handleSave} disabled={saving} className="w-full">{saving ? 'Guardando...' : 'Guardar reglas'}</Button>
         </div>
