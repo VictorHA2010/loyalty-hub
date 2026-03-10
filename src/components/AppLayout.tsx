@@ -51,7 +51,7 @@ interface AppLayoutProps {
 }
 
 const AppLayout = ({ children, role }: AppLayoutProps) => {
-  const { signOut } = useAuth();
+  const { signOut, globalRole } = useAuth();
   const { business } = useBusiness();
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
