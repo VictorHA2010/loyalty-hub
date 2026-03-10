@@ -75,10 +75,10 @@ const AdminStaff = () => {
 
   const handleRemove = async (member: any) => {
     try {
-      const { error } = await supabase.from('user_roles').delete().eq('id', member.id);
-      if (error) throw error;
       await supabase.from('business_members').delete()
         .eq('user_id', member.user_id).eq('business_id', member.business_id).eq('role', 'staff');
+      await supabase.from('user_roles').delete()
+        .eq('user_id', member.user_id).eq('business_id', member.business_id).eq('role', 'staff' as any);
       queryClient.invalidateQueries({ queryKey: ['business-members'] });
       toast.success('Staff eliminado');
     } catch (err: any) {
