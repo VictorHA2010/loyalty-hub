@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, ToggleLeft, ToggleRight, LogOut, Building2, UserPlus } from 'lucide-react';
+import { Plus, ToggleLeft, ToggleRight, LogOut, Building2, UserPlus, ExternalLink } from 'lucide-react';
 
 const PlatformDashboard = () => {
   const { signOut } = useAuth();
