@@ -565,22 +565,39 @@ function HistoryTab({ history, redemptions }: { history: any; redemptions: any }
         <p className="text-xs text-muted-foreground mb-3">Movimientos de puntos</p>
         {history && history.length > 0 ? (
           <div className="space-y-0 border border-border rounded-lg bg-card overflow-hidden">
-            {history.map((entry: any, i: number) => (
-              <div
-                key={entry.id}
-                className={`flex items-center justify-between px-4 py-3 ${i < history.length - 1 ? 'border-b border-border' : ''}`}
-              >
-                <div>
-                  <p className="text-sm text-foreground">{entry.note || entry.type}</p>
-                  <p className="text-xs font-mono text-muted-foreground">
-                    {new Date(entry.created_at).toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' })}
+            {history.map((entry: any, i: number) => {
+              const typeLabel = entry.type === 'bonus' ? '🎁 Regalo'
+                : entry.type === 'earn' ? '➕ Ganados'
+                : entry.type === 'redeem' ? '🎟️ Canje'
+                : entry.type === 'adjustment' ? '📝 Ajuste'
+                : entry.type === 'deduction' ? '📝 Deducción'
+                : entry.type;
+              return (
+                <div
+                  key={entry.id}
+                  className={`flex items-center justify-between px-4 py-3 ${i < history.length - 1 ? 'border-b border-border' : ''}`}
+                >
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${
+                        entry.type === 'bonus' ? 'bg-primary/10 text-primary'
+                        : entry.type === 'redeem' ? 'bg-destructive/10 text-destructive'
+                        : 'bg-secondary text-muted-foreground'
+                      }`}>
+                        {typeLabel}
+                      </span>
+                    </div>
+                    <p className="text-sm text-foreground mt-1">{entry.note || entry.type}</p>
+                    <p className="text-xs font-mono text-muted-foreground">
+                      {new Date(entry.created_at).toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </p>
+                  </div>
+                  <p className={`text-sm font-mono font-semibold ${entry.points >= 0 ? 'text-foreground' : 'text-destructive'}`}>
+                    {entry.points >= 0 ? '+' : ''}{entry.points}
                   </p>
                 </div>
-                <p className={`text-sm font-mono font-semibold ${entry.points >= 0 ? 'text-foreground' : 'text-destructive'}`}>
-                  {entry.points >= 0 ? '+' : ''}{entry.points}
-                </p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="text-center py-8">
