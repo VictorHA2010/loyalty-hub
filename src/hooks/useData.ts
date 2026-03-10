@@ -374,17 +374,3 @@ export function useCustomerReferrals(businessId: string | undefined) {
     enabled: !!user && !!businessId,
   });
 }
-  return useQuery({
-    queryKey: ['customer-points', businessId, userId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('points_ledger')
-        .select('points')
-        .eq('business_id', businessId!)
-        .eq('user_id', userId!);
-      if (error) throw error;
-      return (data || []).reduce((sum, row) => sum + row.points, 0);
-    },
-    enabled: !!businessId && !!userId,
-  });
-}
