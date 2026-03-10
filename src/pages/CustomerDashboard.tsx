@@ -34,6 +34,7 @@ const CustomerDashboard = () => {
   const { data: membership } = useCustomerMembership(businessId);
   const { data: coupons } = useBusinessCoupons(businessId);
   const { data: referrals } = useCustomerReferrals(businessId);
+  const { data: bonusBalance, isLoading: bonusLoading } = useBonusPointsBalance(businessId);
   const [tab, setTab] = useState<TabKey>('home');
   const [redeeming, setRedeeming] = useState<string | null>(null);
 
