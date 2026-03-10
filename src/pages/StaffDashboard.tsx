@@ -335,7 +335,7 @@ function ScanTab() {
       {/* Camera scanner */}
       <div className="flex gap-2">
         {!wantScan && !scanning ? (
-          <Button onClick={() => setWantScan(true)} variant="outline" className="w-full">
+          <Button onClick={startCamera} variant="outline" className="w-full">
             <Camera size={18} className="mr-2" />
             Abrir cámara
           </Button>
