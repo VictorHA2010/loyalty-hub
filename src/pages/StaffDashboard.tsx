@@ -252,48 +252,72 @@ function ScanTab() {
     }
   }, [businessId]);
 
-  const startCamera = async () => {
-    try {
-      const { Html5Qrcode } = await import('html5-qrcode');
-      if (scannerRef.current) {
-        try { await scannerRef.current.stop(); } catch {}
-      }
-      const scanner = new Html5Qrcode('qr-reader');
-      scannerRef.current = scanner;
-      setScanning(true);
+  const [wantScan, setWantScan] = useState(false);
 
-      await scanner.start(
-        { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        async (decodedText: string) => {
-          await scanner.stop();
-          setScanning(false);
-          setQrToken(decodedText);
-          lookupByToken(decodedText);
-        },
-        () => {}
-      );
-    } catch (err: any) {
-      setScanning(false);
-      if (err?.name === 'NotAllowedError') {
-        toast.error('Permiso de cámara denegado');
-      } else {
-        toast.error('No se pudo iniciar la cámara: ' + (err?.message || err));
-      }
-    }
-  };
-
-  const stopCamera = async () => {
+  const stopCamera = useCallback(async () => {
     if (scannerRef.current) {
       try { await scannerRef.current.stop(); } catch {}
       scannerRef.current = null;
     }
     setScanning(false);
-  };
+    setWantScan(false);
+  }, []);
+
+  // When wantScan becomes true, the div renders; this effect then initializes the scanner
+  useEffect(() => {
+    if (!wantScan) return;
+    let cancelled = false;
+
+    const init = async () => {
+      try {
+        const { Html5Qrcode } = await import('html5-qrcode');
+        if (cancelled) return;
+        const el = document.getElementById('qr-reader');
+        if (!el) {
+          toast.error('No se pudo inicializar el escáner');
+          setWantScan(false);
+          return;
+        }
+        if (scannerRef.current) {
+          try { await scannerRef.current.stop(); } catch {}
+        }
+        const scanner = new Html5Qrcode('qr-reader');
+        scannerRef.current = scanner;
+        setScanning(true);
+
+        await scanner.start(
+          { facingMode: 'environment' },
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          async (decodedText: string) => {
+            await scanner.stop();
+            scannerRef.current = null;
+            setScanning(false);
+            setWantScan(false);
+            setQrToken(decodedText);
+            lookupByToken(decodedText);
+          },
+          () => {}
+        );
+      } catch (err: any) {
+        if (cancelled) return;
+        setScanning(false);
+        setWantScan(false);
+        if (err?.name === 'NotAllowedError') {
+          toast.error('Permiso de cámara denegado. Habilita el acceso a la cámara en tu navegador.');
+        } else {
+          toast.error('No se pudo iniciar la cámara: ' + (err?.message || err));
+        }
+      }
+    };
+
+    // Small delay to ensure DOM is painted
+    const timer = setTimeout(init, 100);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [wantScan, lookupByToken]);
 
   useEffect(() => {
     return () => { stopCamera(); };
-  }, []);
+  }, [stopCamera]);
 
   const handleManualScan = () => lookupByToken(qrToken);
 
