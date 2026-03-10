@@ -72,16 +72,15 @@ const PlatformDashboard = () => {
     if (!assignBizId || !adminEmail.trim()) return;
     setAssigning(true);
     try {
-      // Find user by email in profiles
-      const { data: profile, error: profileErr } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', adminEmail.trim())
-        .single();
-      if (profileErr || !profile) {
+      // Find user by email using security definer function
+      const { data: profileResult, error: profileErr } = await supabase
+        .rpc('find_profile_by_email', { _email: adminEmail.trim() });
+      if (profileErr) throw profileErr;
+      if (!profileResult || profileResult.length === 0) {
         toast.error('Usuario no encontrado. Debe registrarse primero.');
         return;
       }
+      const profile = profileResult[0];
 
       // Insert role
       const { error: roleErr } = await supabase.from('user_roles').insert({

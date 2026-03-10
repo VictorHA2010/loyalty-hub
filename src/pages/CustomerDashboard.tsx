@@ -570,7 +570,9 @@ function HistoryTab({ history, redemptions }: { history: any; redemptions: any }
                 : entry.type === 'earn' ? '➕ Ganados'
                 : entry.type === 'redeem' ? '🎟️ Canje'
                 : entry.type === 'adjustment' ? '📝 Ajuste'
-                : entry.type === 'deduction' ? '📝 Deducción'
+                : entry.type === 'referral' ? '👥 Referido'
+                : entry.type === 'promotion' ? '🎉 Promoción'
+                : entry.type === 'membership' ? '⭐ Membresía'
                 : entry.type;
               return (
                 <div

@@ -51,7 +51,15 @@ const AdminDashboard = () => {
             {activity.map((entry) => (
               <div key={entry.id} className="flex items-center justify-between py-3 border-b border-border last:border-0">
                 <div className="flex items-center gap-2">
-                  {entry.type === 'bonus' && <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-primary/10 text-primary">🎁 Bonus</span>}
+                  {entry.type !== 'earn' && (
+                    <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${
+                      entry.type === 'bonus' ? 'bg-primary/10 text-primary'
+                      : entry.type === 'redeem' ? 'bg-destructive/10 text-destructive'
+                      : 'bg-secondary text-muted-foreground'
+                    }`}>
+                      {entry.type === 'bonus' ? '🎁 Bonus' : entry.type === 'redeem' ? '🎟️ Canje' : entry.type === 'referral' ? '👥 Referido' : entry.type === 'promotion' ? '🎉 Promo' : entry.type === 'adjustment' ? '📝 Ajuste' : entry.type === 'membership' ? '⭐ Membresía' : entry.type}
+                    </span>
+                  )}
                   <div>
                     <p className="text-sm text-foreground">
                       <span className="font-medium">{(entry.profiles as any)?.full_name || 'Usuario'}</span>
