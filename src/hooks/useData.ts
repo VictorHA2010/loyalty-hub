@@ -144,7 +144,7 @@ export function useBusinessMembers(businessId: string | undefined) {
     queryKey: ['business-members', businessId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('user_roles')
+        .from('business_members')
         .select('*, profiles(full_name, email, avatar_url, phone)')
         .eq('business_id', businessId!)
         .order('created_at', { ascending: false });
