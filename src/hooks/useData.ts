@@ -199,12 +199,20 @@ export function useAdminDashboardMetrics(businessId: string | undefined) {
   const customers = useQuery({
     queryKey: ['admin-customers-count', businessId],
     queryFn: async () => {
-      const { count, error } = await supabase
-        .from('customer_businesses')
-        .select('*', { count: 'exact', head: true })
-        .eq('business_id', businessId!);
-      if (error) throw error;
-      return count || 0;
+      const [customersRes, rolesRes] = await Promise.all([
+        supabase
+          .from('customer_businesses')
+          .select('user_id')
+          .eq('business_id', businessId!),
+        supabase
+          .from('user_roles')
+          .select('user_id')
+          .eq('business_id', businessId!)
+          .in('role', ['staff', 'business_admin'] as any),
+      ]);
+      if (customersRes.error) throw customersRes.error;
+      const excludeIds = new Set((rolesRes.data || []).map((r) => r.user_id));
+      return (customersRes.data || []).filter((c) => !excludeIds.has(c.user_id)).length;
     },
     enabled: !!businessId,
   });
@@ -256,13 +264,22 @@ export function useBusinessCustomers(businessId: string | undefined) {
   return useQuery({
     queryKey: ['business-customers', businessId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('customer_businesses')
-        .select('*, profiles(id, full_name, email, phone, avatar_url)')
-        .eq('business_id', businessId!)
-        .order('joined_at', { ascending: false });
-      if (error) throw error;
-      return data;
+      const [customersRes, rolesRes] = await Promise.all([
+        supabase
+          .from('customer_businesses')
+          .select('*, profiles(id, full_name, email, phone, avatar_url)')
+          .eq('business_id', businessId!)
+          .order('joined_at', { ascending: false }),
+        supabase
+          .from('user_roles')
+          .select('user_id, role')
+          .eq('business_id', businessId!)
+          .in('role', ['staff', 'business_admin'] as any),
+      ]);
+      if (customersRes.error) throw customersRes.error;
+      // Exclude users who have staff or admin roles in this business
+      const excludeIds = new Set((rolesRes.data || []).map((r) => r.user_id));
+      return (customersRes.data || []).filter((c) => !excludeIds.has(c.user_id));
     },
     enabled: !!businessId,
   });
