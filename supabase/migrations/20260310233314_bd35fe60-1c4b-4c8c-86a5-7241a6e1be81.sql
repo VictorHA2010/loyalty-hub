@@ -1,0 +1,2 @@
+ALTER TABLE public.points_ledger DROP CONSTRAINT points_ledger_type_check;
+ALTER TABLE public.points_ledger ADD CONSTRAINT points_ledger_type_check CHECK (type = ANY (ARRAY['earn', 'redeem', 'bonus', 'referral', 'promotion', 'adjustment', 'membership']));
