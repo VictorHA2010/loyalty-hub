@@ -1,0 +1,73 @@
+import { useAuth } from '@/contexts/AuthContext';
+import { useAdminDashboardMetrics, useBusinessActivity } from '@/hooks/useData';
+import { Skeleton } from '@/components/ui/skeleton';
+import AppLayout from '@/components/AppLayout';
+import { Users, TrendingUp, Gift, Activity } from 'lucide-react';
+
+const AdminDashboard = () => {
+  const { businessContext } = useAuth();
+  const metrics = useAdminDashboardMetrics(businessContext?.businessId);
+  const { data: activity, isLoading: activityLoading } = useBusinessActivity(businessContext?.businessId);
+
+  const cards = [
+    { label: 'Clientes registrados', value: metrics.customersCount, icon: <Users size={20} /> },
+    { label: 'Movimientos hoy', value: metrics.movementsTodayCount, icon: <Activity size={20} /> },
+    { label: 'Puntos emitidos hoy', value: metrics.pointsEarnedToday, icon: <TrendingUp size={20} /> },
+    { label: 'Canjes hoy', value: metrics.redemptionsTodayCount, icon: <Gift size={20} /> },
+  ];
+
+  return (
+    <AppLayout role="admin">
+      <div className="max-w-4xl">
+        <h1 className="text-xl font-semibold text-foreground mb-6">Dashboard</h1>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
+          {cards.map((card) => (
+            <div key={card.label} className="border border-border rounded-md p-4 bg-card">
+              <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                {card.icon}
+                <span className="text-xs">{card.label}</span>
+              </div>
+              {metrics.isLoading ? (
+                <Skeleton className="h-8 w-16" />
+              ) : (
+                <p className="text-2xl font-semibold font-mono text-foreground">{card.value}</p>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <h2 className="text-lg font-semibold text-foreground mb-4">Actividad reciente</h2>
+        {activityLoading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+          </div>
+        ) : activity && activity.length > 0 ? (
+          <div className="space-y-1">
+            {activity.map((entry) => (
+              <div key={entry.id} className="flex items-center justify-between py-3 border-b border-border last:border-0">
+                <div>
+                  <p className="text-sm text-foreground">
+                    <span className="font-medium">{(entry.profiles as any)?.full_name || 'Usuario'}</span>
+                    {' — '}
+                    {entry.note || entry.type}
+                  </p>
+                  <p className="text-xs font-mono text-muted-foreground">
+                    {new Date(entry.created_at).toLocaleString()}
+                  </p>
+                </div>
+                <p className={`text-sm font-mono font-medium ${entry.points >= 0 ? 'text-foreground' : 'text-destructive'}`}>
+                  {entry.points >= 0 ? '+' : ''}{entry.points}
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground text-center py-8">Sin actividad reciente</p>
+        )}
+      </div>
+    </AppLayout>
+  );
+};
+
+export default AdminDashboard;

@@ -1,11 +1,11 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useProfile, usePointsBalance, useRewards, usePointsHistory, useRedemptions } from '@/hooks/useData';
+import { useProfile, usePointsBalance, useRewards, usePointsHistory, useRedemptions, useCustomerMembership } from '@/hooks/useData';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { Gift, History, LogOut, QrCode, User } from 'lucide-react';
+import { Gift, History, LogOut, QrCode, User, Crown } from 'lucide-react';
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -18,6 +18,7 @@ const CustomerDashboard = () => {
   const { data: rewards, isLoading: rewardsLoading } = useRewards(businessContext?.businessId);
   const { data: history } = usePointsHistory(businessContext?.businessId);
   const { data: redemptions } = useRedemptions(businessContext?.businessId);
+  const { data: membership } = useCustomerMembership(businessContext?.businessId);
   const [tab, setTab] = useState<'rewards' | 'history' | 'profile'>('rewards');
   const [redeeming, setRedeeming] = useState<string | null>(null);
 
@@ -75,6 +76,14 @@ const CustomerDashboard = () => {
               <h1 className="text-lg font-semibold text-foreground">
                 {profileLoading ? <Skeleton className="h-5 w-32" /> : (profile?.full_name || 'Usuario')}
               </h1>
+              {membership?.status === 'active' && (
+                <div className="flex items-center gap-1 mt-1">
+                  {(membership as any)?.is_plus && <Crown size={12} className="text-primary" />}
+                  <span className="text-xs font-mono text-primary">
+                    {(membership as any)?.is_plus ? 'Miembro Plus' : 'Miembro activo'}
+                  </span>
+                </div>
+              )}
             </div>
             <button onClick={handleSignOut} className="p-2 text-muted-foreground hover:bg-secondary rounded-md">
               <LogOut size={18} />

@@ -145,7 +145,7 @@ export function useBusinessMembers(businessId: string | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('user_roles')
-        .select('*, profiles(full_name, avatar_url, phone)')
+        .select('*, profiles(full_name, email, avatar_url, phone)')
         .eq('business_id', businessId!)
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -187,5 +187,153 @@ export function useNotifications() {
       return data;
     },
     enabled: !!user,
+  });
+}
+
+// Admin dashboard metrics
+export function useAdminDashboardMetrics(businessId: string | undefined) {
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayISO = todayStart.toISOString();
+
+  const customers = useQuery({
+    queryKey: ['admin-customers-count', businessId],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('customer_businesses')
+        .select('*', { count: 'exact', head: true })
+        .eq('business_id', businessId!);
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!businessId,
+  });
+
+  const movementsToday = useQuery({
+    queryKey: ['admin-movements-today', businessId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('points_ledger')
+        .select('points')
+        .eq('business_id', businessId!)
+        .gte('created_at', todayISO);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!businessId,
+  });
+
+  const redemptionsToday = useQuery({
+    queryKey: ['admin-redemptions-today', businessId],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('redemptions')
+        .select('*', { count: 'exact', head: true })
+        .eq('business_id', businessId!)
+        .gte('created_at', todayISO);
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!businessId,
+  });
+
+  const movements = movementsToday.data || [];
+  const pointsEarnedToday = movements
+    .filter((m) => m.points > 0)
+    .reduce((sum, m) => sum + m.points, 0);
+
+  return {
+    customersCount: customers.data ?? 0,
+    movementsTodayCount: movements.length,
+    pointsEarnedToday,
+    redemptionsTodayCount: redemptionsToday.data ?? 0,
+    isLoading: customers.isLoading || movementsToday.isLoading || redemptionsToday.isLoading,
+  };
+}
+
+// Business customers list
+export function useBusinessCustomers(businessId: string | undefined) {
+  return useQuery({
+    queryKey: ['business-customers', businessId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('customer_businesses')
+        .select('*, profiles(id, full_name, email, phone, avatar_url)')
+        .eq('business_id', businessId!)
+        .order('joined_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!businessId,
+  });
+}
+
+// Business memberships
+export function useBusinessMemberships(businessId: string | undefined) {
+  return useQuery({
+    queryKey: ['business-memberships', businessId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('memberships')
+        .select('*, profiles(full_name, email)')
+        .eq('business_id', businessId!)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!businessId,
+  });
+}
+
+// Loyalty settings
+export function useLoyaltySettings(businessId: string | undefined) {
+  return useQuery({
+    queryKey: ['loyalty-settings', businessId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('loyalty_settings')
+        .select('*')
+        .eq('business_id', businessId!)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!businessId,
+  });
+}
+
+// Customer membership
+export function useCustomerMembership(businessId: string | undefined) {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['customer-membership', businessId, user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('memberships')
+        .select('*')
+        .eq('business_id', businessId!)
+        .eq('user_id', user!.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user && !!businessId,
+  });
+}
+
+// Customer points for staff
+export function useCustomerPointsBalance(businessId: string | undefined, userId: string | undefined) {
+  return useQuery({
+    queryKey: ['customer-points', businessId, userId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('points_ledger')
+        .select('points')
+        .eq('business_id', businessId!)
+        .eq('user_id', userId!);
+      if (error) throw error;
+      return (data || []).reduce((sum, row) => sum + row.points, 0);
+    },
+    enabled: !!businessId && !!userId,
   });
 }
