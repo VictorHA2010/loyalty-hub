@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useBusiness } from '@/contexts/BusinessContext';
 import { useAllRewards } from '@/hooks/useData';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -12,8 +12,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import AppLayout from '@/components/AppLayout';
 
 const AdminRewards = () => {
-  const { businessContext } = useAuth();
-  const { data: rewards, isLoading } = useAllRewards(businessContext?.businessId);
+  const { business } = useBusiness();
+  const businessId = business?.id;
+  const { data: rewards, isLoading } = useAllRewards(businessId);
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
@@ -38,7 +39,7 @@ const AdminRewards = () => {
         toast.success('Recompensa actualizada');
       } else {
         const { error } = await supabase.from('rewards').insert({
-          business_id: businessContext!.businessId,
+          business_id: businessId!,
           name: form.name,
           description: form.description,
           points_cost: parseInt(form.points_cost),
@@ -75,8 +76,7 @@ const AdminRewards = () => {
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-xl font-semibold text-foreground">Recompensas</h1>
           <Button onClick={() => { resetForm(); setShowForm(!showForm); }} size="sm">
-            <Plus size={16} className="mr-1" />
-            Nueva
+            <Plus size={16} className="mr-1" /> Nueva
           </Button>
         </div>
 
@@ -110,15 +110,11 @@ const AdminRewards = () => {
             {rewards.map((r) => (
               <div key={r.id} className="flex items-center justify-between border border-border rounded-md p-4 bg-card">
                 <div>
-                  <p className={`text-sm font-medium ${r.active ? 'text-foreground' : 'text-muted-foreground line-through'}`}>
-                    {r.name}
-                  </p>
+                  <p className={`text-sm font-medium ${r.active ? 'text-foreground' : 'text-muted-foreground line-through'}`}>{r.name}</p>
                   <p className="text-xs font-mono text-muted-foreground">{r.points_cost} pts</p>
                 </div>
                 <div className="flex items-center gap-1">
-                  <button onClick={() => startEdit(r)} className="p-2 text-muted-foreground hover:bg-secondary rounded-md">
-                    <Pencil size={14} />
-                  </button>
+                  <button onClick={() => startEdit(r)} className="p-2 text-muted-foreground hover:bg-secondary rounded-md"><Pencil size={14} /></button>
                   <button onClick={() => toggleActive(r.id, r.active)} className="p-2 text-muted-foreground hover:bg-secondary rounded-md">
                     {r.active ? <ToggleRight size={18} className="text-primary" /> : <ToggleLeft size={18} />}
                   </button>

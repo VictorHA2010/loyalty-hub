@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useBusiness } from '@/contexts/BusinessContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBusinessRedemptions, useLoyaltySettings } from '@/hooks/useData';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { QrCode, Plus, X, Check, Search, History, Gift, Users } from 'lucide-react';
+import { QrCode, Plus, X, Check, Search, Gift, Users } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import AppLayout from '@/components/AppLayout';
 
@@ -30,9 +31,7 @@ const StaffDashboard = () => {
               key={t.key}
               onClick={() => setTab(t.key)}
               className={`flex items-center gap-2 px-4 py-3 text-sm transition-colors border-b-2 ${
-                tab === t.key
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
+                tab === t.key ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
               {t.icon}
@@ -40,7 +39,6 @@ const StaffDashboard = () => {
             </button>
           ))}
         </div>
-
         {tab === 'scan' && <ScanTab />}
         {tab === 'customers' && <CustomersTab />}
         {tab === 'redemptions' && <RedemptionsTab />}
@@ -50,8 +48,9 @@ const StaffDashboard = () => {
 };
 
 function ScanTab() {
-  const { businessContext } = useAuth();
-  const { data: settings } = useLoyaltySettings(businessContext?.businessId);
+  const { business } = useBusiness();
+  const businessId = business?.id;
+  const { data: settings } = useLoyaltySettings(businessId);
   const queryClient = useQueryClient();
   const [qrToken, setQrToken] = useState('');
   const [scannedUser, setScannedUser] = useState<any>(null);
@@ -61,119 +60,68 @@ function ScanTab() {
   const [assigning, setAssigning] = useState(false);
 
   const handleScan = async () => {
-    if (!qrToken.trim()) return;
+    if (!qrToken.trim() || !businessId) return;
     try {
       const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('qr_token', qrToken.trim())
-        .single();
-      if (error || !profile) {
-        toast.error('Usuario no encontrado');
-        return;
-      }
+        .from('profiles').select('*').eq('qr_token', qrToken.trim()).single();
+      if (error || !profile) { toast.error('Usuario no encontrado'); return; }
 
       const { data: points } = await supabase
-        .from('points_ledger')
-        .select('points')
-        .eq('business_id', businessContext!.businessId)
-        .eq('user_id', profile.id);
+        .from('points_ledger').select('points').eq('business_id', businessId).eq('user_id', profile.id);
       const balance = (points || []).reduce((sum, r) => sum + r.points, 0);
 
       const { data: mem } = await supabase
-        .from('memberships')
-        .select('*')
-        .eq('business_id', businessContext!.businessId)
-        .eq('user_id', profile.id)
-        .maybeSingle();
+        .from('memberships').select('*').eq('business_id', businessId).eq('user_id', profile.id).maybeSingle();
 
       setScannedUser(profile);
       setScannedBalance(balance);
       setMembership(mem);
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+    } catch (err: any) { toast.error(err.message); }
   };
 
   const handleAssignPoints = async () => {
     let pts = parseInt(pointsToAssign);
-    if (!pts || pts <= 0 || !scannedUser) return;
+    if (!pts || pts <= 0 || !scannedUser || !businessId) return;
     setAssigning(true);
     try {
-      // Apply loyalty settings
-      const basePoints = settings?.base_points_per_purchase || pts;
       let finalPoints = pts;
-      
-      // Apply Plus multiplier if applicable
       if (membership?.is_plus && membership.status === 'active') {
         const multiplier = settings?.membership_points_multiplier || (membership as any)?.points_multiplier || 1;
         finalPoints = Math.round(finalPoints * Number(multiplier));
       }
-
       const { error } = await supabase.from('points_ledger').insert({
-        business_id: businessContext!.businessId,
-        user_id: scannedUser.id,
-        points: finalPoints,
-        type: 'earn',
+        business_id: businessId, user_id: scannedUser.id, points: finalPoints, type: 'earn',
         note: finalPoints !== pts ? `staff_assignment (x${membership?.points_multiplier || settings?.membership_points_multiplier})` : 'staff_assignment',
       });
       if (error) throw error;
-
-      // Add bonus points if configured
       if (settings?.free_bonus_points && settings.free_bonus_points > 0) {
         await supabase.from('points_ledger').insert({
-          business_id: businessContext!.businessId,
-          user_id: scannedUser.id,
-          points: settings.free_bonus_points,
-          type: 'bonus',
-          note: 'bonus_points',
+          business_id: businessId, user_id: scannedUser.id, points: settings.free_bonus_points, type: 'bonus', note: 'bonus_points',
         });
         finalPoints += settings.free_bonus_points;
       }
-
       setScannedBalance((prev) => prev + finalPoints);
       setPointsToAssign('');
       toast.success(`${finalPoints} puntos asignados`);
-    } catch (err: any) {
-      toast.error(err.message);
-    } finally {
-      setAssigning(false);
-    }
+    } catch (err: any) { toast.error(err.message); }
+    finally { setAssigning(false); }
   };
 
-  const dismiss = () => {
-    setScannedUser(null);
-    setQrToken('');
-    setPointsToAssign('');
-    setMembership(null);
-  };
+  const dismiss = () => { setScannedUser(null); setQrToken(''); setPointsToAssign(''); setMembership(null); };
 
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-semibold text-foreground">Escanear QR</h2>
       <div className="flex gap-2">
-        <Input
-          placeholder="Token QR del cliente"
-          value={qrToken}
-          onChange={(e) => setQrToken(e.target.value)}
-          className="font-mono"
-          onKeyDown={(e) => e.key === 'Enter' && handleScan()}
-        />
-        <Button onClick={handleScan}>
-          <QrCode size={18} />
-        </Button>
+        <Input placeholder="Token QR del cliente" value={qrToken} onChange={(e) => setQrToken(e.target.value)} className="font-mono" onKeyDown={(e) => e.key === 'Enter' && handleScan()} />
+        <Button onClick={handleScan}><QrCode size={18} /></Button>
       </div>
-
       {scannedUser && (
         <div className="border border-border rounded-md bg-card p-4 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center overflow-hidden">
-                {scannedUser.avatar_url ? (
-                  <img src={scannedUser.avatar_url} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <QrCode size={20} className="text-muted-foreground" />
-                )}
+                {scannedUser.avatar_url ? <img src={scannedUser.avatar_url} alt="" className="w-full h-full object-cover" /> : <QrCode size={20} className="text-muted-foreground" />}
               </div>
               <div>
                 <p className="font-medium text-foreground">{scannedUser.full_name || 'Sin nombre'}</p>
@@ -183,23 +131,11 @@ function ScanTab() {
                 )}
               </div>
             </div>
-            <button onClick={dismiss} className="p-2 text-muted-foreground hover:bg-secondary rounded-md">
-              <X size={18} />
-            </button>
+            <button onClick={dismiss} className="p-2 text-muted-foreground hover:bg-secondary rounded-md"><X size={18} /></button>
           </div>
-
           <div className="flex gap-2">
-            <Input
-              type="number"
-              placeholder="Puntos a asignar"
-              value={pointsToAssign}
-              onChange={(e) => setPointsToAssign(e.target.value)}
-              min={1}
-            />
-            <Button onClick={handleAssignPoints} disabled={assigning}>
-              <Plus size={18} className="mr-1" />
-              Asignar
-            </Button>
+            <Input type="number" placeholder="Puntos a asignar" value={pointsToAssign} onChange={(e) => setPointsToAssign(e.target.value)} min={1} />
+            <Button onClick={handleAssignPoints} disabled={assigning}><Plus size={18} className="mr-1" />Asignar</Button>
           </div>
         </div>
       )}
@@ -208,22 +144,21 @@ function ScanTab() {
 }
 
 function CustomersTab() {
-  const { businessContext } = useAuth();
+  const { business } = useBusiness();
+  const businessId = business?.id;
   const [search, setSearch] = useState('');
   const [results, setResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
 
   const handleSearch = async () => {
-    if (!search.trim() || !businessContext) return;
+    if (!search.trim() || !businessId) return;
     setSearching(true);
     try {
-      // Search customers of this business
       const { data, error } = await supabase
         .from('customer_businesses')
         .select('*, profiles(id, full_name, email, phone, qr_token)')
-        .eq('business_id', businessContext.businessId);
+        .eq('business_id', businessId);
       if (error) throw error;
-
       const q = search.toLowerCase();
       const filtered = (data || []).filter((c: any) => {
         const name = (c.profiles?.full_name || '').toLowerCase();
@@ -232,28 +167,17 @@ function CustomersTab() {
         return name.includes(q) || email.includes(q) || phone.includes(q);
       });
       setResults(filtered);
-    } catch (err: any) {
-      toast.error(err.message);
-    } finally {
-      setSearching(false);
-    }
+    } catch (err: any) { toast.error(err.message); }
+    finally { setSearching(false); }
   };
 
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-semibold text-foreground">Buscar clientes</h2>
       <div className="flex gap-2">
-        <Input
-          placeholder="Nombre, email o teléfono..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-        />
-        <Button onClick={handleSearch} disabled={searching}>
-          <Search size={18} />
-        </Button>
+        <Input placeholder="Nombre, email o teléfono..." value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSearch()} />
+        <Button onClick={handleSearch} disabled={searching}><Search size={18} /></Button>
       </div>
-
       {results.length > 0 && (
         <div className="space-y-2">
           {results.map((c: any) => (
@@ -271,8 +195,9 @@ function CustomersTab() {
 }
 
 function RedemptionsTab() {
-  const { businessContext } = useAuth();
-  const { data: redemptions, isLoading } = useBusinessRedemptions(businessContext?.businessId);
+  const { business } = useBusiness();
+  const businessId = business?.id;
+  const { data: redemptions, isLoading } = useBusinessRedemptions(businessId);
   const queryClient = useQueryClient();
 
   const handleUpdate = async (id: string, status: 'approved' | 'rejected') => {
@@ -281,18 +206,14 @@ function RedemptionsTab() {
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ['business-redemptions'] });
       toast.success(`Canje ${status === 'approved' ? 'aprobado' : 'rechazado'}`);
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+    } catch (err: any) { toast.error(err.message); }
   };
 
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-semibold text-foreground">Canjes pendientes</h2>
       {isLoading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
-        </div>
+        <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}</div>
       ) : redemptions && redemptions.length > 0 ? (
         <div className="space-y-2">
           {redemptions.map((r) => (
@@ -303,21 +224,11 @@ function RedemptionsTab() {
                 <p className="text-xs font-mono text-muted-foreground">{new Date(r.created_at).toLocaleDateString()}</p>
               </div>
               <div className="flex items-center gap-2">
-                <span className={`text-xs font-mono px-2 py-0.5 rounded ${
-                  r.status === 'pending' ? 'bg-secondary text-muted-foreground' :
-                  r.status === 'approved' ? 'bg-secondary text-foreground' :
-                  'bg-secondary text-destructive'
-                }`}>
-                  {r.status}
-                </span>
+                <span className={`text-xs font-mono px-2 py-0.5 rounded ${r.status === 'pending' ? 'bg-secondary text-muted-foreground' : r.status === 'approved' ? 'bg-secondary text-foreground' : 'bg-secondary text-destructive'}`}>{r.status}</span>
                 {r.status === 'pending' && (
                   <>
-                    <Button size="sm" variant="outline" onClick={() => handleUpdate(r.id, 'approved')}>
-                      <Check size={14} />
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => handleUpdate(r.id, 'rejected')}>
-                      <X size={14} />
-                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => handleUpdate(r.id, 'approved')}><Check size={14} /></Button>
+                    <Button size="sm" variant="outline" onClick={() => handleUpdate(r.id, 'rejected')}><X size={14} /></Button>
                   </>
                 )}
               </div>

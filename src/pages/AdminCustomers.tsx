@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useBusiness } from '@/contexts/BusinessContext';
 import { useBusinessCustomers } from '@/hooks/useData';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
@@ -11,8 +11,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import AppLayout from '@/components/AppLayout';
 
 const AdminCustomers = () => {
-  const { businessContext } = useAuth();
-  const { data: customers, isLoading } = useBusinessCustomers(businessContext?.businessId);
+  const { business } = useBusiness();
+  const businessId = business?.id;
+  const { data: customers, isLoading } = useBusinessCustomers(businessId);
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -27,16 +28,10 @@ const AdminCustomers = () => {
     <AppLayout role="admin">
       <div className="max-w-3xl">
         <h1 className="text-xl font-semibold text-foreground mb-6">Clientes</h1>
-
         <div className="flex gap-2 mb-4">
           <div className="relative flex-1">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por nombre o email..."
-              className="pl-9"
-            />
+            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por nombre o email..." className="pl-9" />
           </div>
         </div>
 
@@ -61,20 +56,16 @@ const AdminCustomers = () => {
                       <p className="text-xs text-muted-foreground">{c.profiles?.email}</p>
                     </div>
                   </div>
-                  <p className="text-xs font-mono text-muted-foreground">
-                    {new Date(c.joined_at).toLocaleDateString()}
-                  </p>
+                  <p className="text-xs font-mono text-muted-foreground">{new Date(c.joined_at).toLocaleDateString()}</p>
                 </button>
-                {selectedId === c.profiles?.id && (
-                  <CustomerDetail businessId={businessContext!.businessId} userId={c.profiles.id} />
+                {selectedId === c.profiles?.id && businessId && (
+                  <CustomerDetail businessId={businessId} userId={c.profiles.id} />
                 )}
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground text-center py-8">
-            {search ? 'Sin resultados' : 'Sin clientes registrados'}
-          </p>
+          <p className="text-sm text-muted-foreground text-center py-8">{search ? 'Sin resultados' : 'Sin clientes registrados'}</p>
         )}
       </div>
     </AppLayout>
@@ -117,23 +108,16 @@ function CustomerDetail({ businessId, userId }: { businessId: string; userId: st
     setAdjusting(true);
     try {
       const { error } = await supabase.from('points_ledger').insert({
-        business_id: businessId,
-        user_id: userId,
-        points: pts,
-        type: pts > 0 ? 'adjustment' : 'deduction',
-        note: adjustNote || 'Ajuste manual admin',
+        business_id: businessId, user_id: userId, points: pts,
+        type: pts > 0 ? 'adjustment' : 'deduction', note: adjustNote || 'Ajuste manual admin',
       });
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ['customer-points', businessId, userId] });
       queryClient.invalidateQueries({ queryKey: ['customer-history-admin', businessId, userId] });
-      setAdjustPoints('');
-      setAdjustNote('');
+      setAdjustPoints(''); setAdjustNote('');
       toast.success('Puntos ajustados');
-    } catch (err: any) {
-      toast.error(err.message);
-    } finally {
-      setAdjusting(false);
-    }
+    } catch (err: any) { toast.error(err.message); }
+    finally { setAdjusting(false); }
   };
 
   return (
@@ -151,26 +135,11 @@ function CustomerDetail({ businessId, userId }: { businessId: string; userId: st
           </div>
         </div>
       </div>
-
       <div className="flex gap-2">
-        <Input
-          type="number"
-          placeholder="±Puntos"
-          value={adjustPoints}
-          onChange={(e) => setAdjustPoints(e.target.value)}
-          className="w-24"
-        />
-        <Input
-          placeholder="Nota (opcional)"
-          value={adjustNote}
-          onChange={(e) => setAdjustNote(e.target.value)}
-          className="flex-1"
-        />
-        <Button size="sm" onClick={handleAdjust} disabled={adjusting}>
-          Ajustar
-        </Button>
+        <Input type="number" placeholder="±Puntos" value={adjustPoints} onChange={(e) => setAdjustPoints(e.target.value)} className="w-24" />
+        <Input placeholder="Nota (opcional)" value={adjustNote} onChange={(e) => setAdjustNote(e.target.value)} className="flex-1" />
+        <Button size="sm" onClick={handleAdjust} disabled={adjusting}>Ajustar</Button>
       </div>
-
       {history && history.length > 0 && (
         <div>
           <p className="text-xs font-medium text-muted-foreground mb-2">Últimos movimientos</p>

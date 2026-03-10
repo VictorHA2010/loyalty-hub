@@ -15,7 +15,6 @@ const SelectBusiness = () => {
       navigate('/login');
       return;
     }
-    // Platform admin goes directly to /platform
     if (globalRole === 'platform_admin') {
       navigate('/platform');
       return;
@@ -25,16 +24,15 @@ const SelectBusiness = () => {
   useEffect(() => {
     if (!businesses || globalRole === 'platform_admin') return;
 
-    // If user has exactly one business, auto-select
     if (businesses.length === 1) {
       const b = businesses[0];
       const biz = b.businesses as any;
       setBusinessContext({
-        businessId: b.business_id,
+        businessId: b.business_id!,
         role: b.role as any,
         businessName: biz?.name || '',
       });
-      const route = getRouteForRole(b.role);
+      const route = getRouteForRole(b.role, biz?.slug);
       navigate(route);
     }
   }, [businesses, globalRole, navigate, setBusinessContext]);
@@ -91,7 +89,7 @@ const SelectBusiness = () => {
       role: b.role as any,
       businessName: biz?.name || '',
     });
-    const route = getRouteForRole(b.role);
+    const route = getRouteForRole(b.role, biz?.slug);
     navigate(route);
   };
 
@@ -124,12 +122,13 @@ const SelectBusiness = () => {
   );
 };
 
-function getRouteForRole(role: string): string {
+function getRouteForRole(role: string, slug?: string): string {
+  if (!slug) return '/select-business';
   switch (role) {
     case 'platform_admin': return '/platform';
-    case 'business_admin': return '/admin';
-    case 'staff': return '/staff';
-    default: return '/app';
+    case 'business_admin': return `/admin/${slug}`;
+    case 'staff': return `/staff/${slug}`;
+    default: return `/b/${slug}/app`;
   }
 }
 

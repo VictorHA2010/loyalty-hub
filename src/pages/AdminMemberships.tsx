@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useBusinessMemberships, useBusinessCustomers } from '@/hooks/useData';
+import { useBusiness } from '@/contexts/BusinessContext';
+import { useBusinessMemberships } from '@/hooks/useData';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -10,8 +10,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import AppLayout from '@/components/AppLayout';
 
 const AdminMemberships = () => {
-  const { businessContext } = useAuth();
-  const { data: memberships, isLoading } = useBusinessMemberships(businessContext?.businessId);
+  const { business } = useBusiness();
+  const businessId = business?.id;
+  const { data: memberships, isLoading } = useBusinessMemberships(businessId);
   const queryClient = useQueryClient();
 
   const toggleStatus = async (id: string, currentStatus: string) => {
@@ -21,9 +22,7 @@ const AdminMemberships = () => {
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ['business-memberships'] });
       toast.success(`Membresía ${newStatus === 'active' ? 'activada' : 'desactivada'}`);
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+    } catch (err: any) { toast.error(err.message); }
   };
 
   const togglePlus = async (id: string, currentPlus: boolean, multiplier: number) => {
@@ -35,16 +34,13 @@ const AdminMemberships = () => {
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ['business-memberships'] });
       toast.success(!currentPlus ? 'Plus activado' : 'Plus desactivado');
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+    } catch (err: any) { toast.error(err.message); }
   };
 
   return (
     <AppLayout role="admin">
       <div className="max-w-2xl">
         <h1 className="text-xl font-semibold text-foreground mb-6">Membresías</h1>
-
         {isLoading ? (
           <div className="space-y-3">
             {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
@@ -64,24 +60,14 @@ const AdminMemberships = () => {
                       <span className={`text-xs font-mono px-2 py-0.5 rounded ${m.status === 'active' ? 'bg-secondary text-foreground' : 'bg-secondary text-muted-foreground'}`}>
                         {m.status}
                       </span>
-                      {m.is_plus && (
-                        <span className="text-xs font-mono text-primary">x{m.points_multiplier || 1}</span>
-                      )}
+                      {m.is_plus && <span className="text-xs font-mono text-primary">x{m.points_multiplier || 1}</span>}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => togglePlus(m.id, m.is_plus, m.points_multiplier)}
-                      title={m.is_plus ? 'Quitar Plus' : 'Hacer Plus'}
-                    >
+                    <Button size="sm" variant="outline" onClick={() => togglePlus(m.id, m.is_plus, m.points_multiplier)} title={m.is_plus ? 'Quitar Plus' : 'Hacer Plus'}>
                       <Crown size={14} className={m.is_plus ? 'text-primary' : 'text-muted-foreground'} />
                     </Button>
-                    <button
-                      onClick={() => toggleStatus(m.id, m.status)}
-                      className="p-2 text-muted-foreground hover:bg-secondary rounded-md"
-                    >
+                    <button onClick={() => toggleStatus(m.id, m.status)} className="p-2 text-muted-foreground hover:bg-secondary rounded-md">
                       {m.status === 'active' ? <ToggleRight size={18} className="text-primary" /> : <ToggleLeft size={18} />}
                     </button>
                   </div>

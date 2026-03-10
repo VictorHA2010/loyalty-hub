@@ -1,13 +1,14 @@
-import { useAuth } from '@/contexts/AuthContext';
+import { useBusiness } from '@/contexts/BusinessContext';
 import { useAdminDashboardMetrics, useBusinessActivity } from '@/hooks/useData';
 import { Skeleton } from '@/components/ui/skeleton';
 import AppLayout from '@/components/AppLayout';
 import { Users, TrendingUp, Gift, Activity } from 'lucide-react';
 
 const AdminDashboard = () => {
-  const { businessContext } = useAuth();
-  const metrics = useAdminDashboardMetrics(businessContext?.businessId);
-  const { data: activity, isLoading: activityLoading } = useBusinessActivity(businessContext?.businessId);
+  const { business } = useBusiness();
+  const businessId = business?.id;
+  const metrics = useAdminDashboardMetrics(businessId);
+  const { data: activity, isLoading: activityLoading } = useBusinessActivity(businessId);
 
   const cards = [
     { label: 'Clientes registrados', value: metrics.customersCount, icon: <Users size={20} /> },
