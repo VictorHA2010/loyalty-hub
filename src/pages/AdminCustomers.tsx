@@ -44,7 +44,7 @@ const AdminCustomers = () => {
             {filtered.map((c: any) => (
               <div key={c.id}>
                 <button
-                  onClick={() => setSelectedId(selectedId === c.profiles?.id ? null : c.profiles?.id)}
+                  onClick={() => setSelectedId(selectedId === c.user_id ? null : c.user_id)}
                   className="w-full flex items-center justify-between border border-border rounded-md p-4 bg-card hover:bg-secondary transition-colors text-left"
                 >
                   <div className="flex items-center gap-3">
@@ -53,13 +53,13 @@ const AdminCustomers = () => {
                     </div>
                     <div>
                       <p className="text-sm font-medium text-foreground">{c.profiles?.full_name || 'Sin nombre'}</p>
-                      <p className="text-xs text-muted-foreground">{c.profiles?.email}</p>
+                      <p className="text-xs text-muted-foreground">{c.profiles?.email || 'Sin email'}</p>
                     </div>
                   </div>
                   <p className="text-xs font-mono text-muted-foreground">{new Date(c.joined_at).toLocaleDateString()}</p>
                 </button>
-                {selectedId === c.profiles?.id && businessId && (
-                  <CustomerDetail businessId={businessId} userId={c.profiles.id} />
+                {selectedId === c.user_id && businessId && (
+                  <CustomerDetail businessId={businessId} userId={c.user_id} />
                 )}
               </div>
             ))}
