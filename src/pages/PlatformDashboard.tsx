@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, ToggleLeft, ToggleRight, LogOut, Building2, UserPlus } from 'lucide-react';
+import { Plus, ToggleLeft, ToggleRight, LogOut, Building2, UserPlus, ExternalLink } from 'lucide-react';
 
 const PlatformDashboard = () => {
   const { signOut } = useAuth();
@@ -175,6 +175,13 @@ const PlatformDashboard = () => {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => navigate(`/admin/${biz.slug}`)}
+                      className="p-2 text-muted-foreground hover:bg-secondary rounded-md"
+                      title="Abrir negocio"
+                    >
+                      <ExternalLink size={16} />
+                    </button>
                     <button
                       onClick={() => setAssignBizId(assignBizId === biz.id ? null : biz.id)}
                       className="p-2 text-muted-foreground hover:bg-secondary rounded-md"
