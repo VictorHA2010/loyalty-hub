@@ -199,12 +199,20 @@ export function useAdminDashboardMetrics(businessId: string | undefined) {
   const customers = useQuery({
     queryKey: ['admin-customers-count', businessId],
     queryFn: async () => {
-      const { count, error } = await supabase
-        .from('customer_businesses')
-        .select('*', { count: 'exact', head: true })
-        .eq('business_id', businessId!);
-      if (error) throw error;
-      return count || 0;
+      const [customersRes, rolesRes] = await Promise.all([
+        supabase
+          .from('customer_businesses')
+          .select('user_id')
+          .eq('business_id', businessId!),
+        supabase
+          .from('user_roles')
+          .select('user_id')
+          .eq('business_id', businessId!)
+          .in('role', ['staff', 'business_admin'] as any),
+      ]);
+      if (customersRes.error) throw customersRes.error;
+      const excludeIds = new Set((rolesRes.data || []).map((r) => r.user_id));
+      return (customersRes.data || []).filter((c) => !excludeIds.has(c.user_id)).length;
     },
     enabled: !!businessId,
   });
