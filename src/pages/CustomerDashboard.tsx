@@ -218,7 +218,7 @@ const CustomerDashboard = () => {
 };
 
 /* ═══════════════════════════════════════════ HOME TAB ═══════════════════════════════════════════ */
-function HomeTab({ balance, balanceLoading, membership, profile, businessName, onNavigate }: any) {
+function HomeTab({ balance, balanceLoading, bonusBalance, bonusLoading, membership, profile, businessName, onNavigate }: any) {
   return (
     <div className="space-y-5">
       {/* Points Card */}
@@ -236,6 +236,24 @@ function HomeTab({ balance, balanceLoading, membership, profile, businessName, o
             </span>
           </div>
         )}
+      </div>
+
+      {/* Bonus Points Card */}
+      <div className="rounded-xl border border-border bg-card p-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+            <Gift size={18} className="text-primary" />
+          </div>
+          <div className="flex-1">
+            <p className="text-xs text-muted-foreground">Puntos de regalo</p>
+            <p className="text-xl font-bold font-mono text-foreground">
+              {bonusLoading ? <Skeleton className="h-6 w-12 inline-block" /> : (bonusBalance ?? 0)}
+            </p>
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground mt-2">
+          Puntos extra que has recibido por promociones, membresía o bonos especiales. Cuentan para canjear recompensas.
+        </p>
       </div>
 
       {/* Quick Actions */}
