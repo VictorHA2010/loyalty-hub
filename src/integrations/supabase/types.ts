@@ -62,27 +62,45 @@ export type Database = {
       businesses: {
         Row: {
           active: boolean
+          business_type: string | null
           created_at: string
+          custom_domain: string | null
           id: string
           logo_url: string | null
           name: string
+          primary_color: string | null
+          secondary_color: string | null
+          short_description: string | null
           slug: string
+          welcome_message: string | null
         }
         Insert: {
           active?: boolean
+          business_type?: string | null
           created_at?: string
+          custom_domain?: string | null
           id?: string
           logo_url?: string | null
           name: string
+          primary_color?: string | null
+          secondary_color?: string | null
+          short_description?: string | null
           slug: string
+          welcome_message?: string | null
         }
         Update: {
           active?: boolean
+          business_type?: string | null
           created_at?: string
+          custom_domain?: string | null
           id?: string
           logo_url?: string | null
           name?: string
+          primary_color?: string | null
+          secondary_color?: string | null
+          short_description?: string | null
           slug?: string
+          welcome_message?: string | null
         }
         Relationships: []
       }
