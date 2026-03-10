@@ -176,6 +176,13 @@ const PlatformDashboard = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     <button
+                      onClick={() => navigate(`/admin/${biz.slug}`)}
+                      className="p-2 text-muted-foreground hover:bg-secondary rounded-md"
+                      title="Abrir negocio"
+                    >
+                      <ExternalLink size={16} />
+                    </button>
+                    <button
                       onClick={() => setAssignBizId(assignBizId === biz.id ? null : biz.id)}
                       className="p-2 text-muted-foreground hover:bg-secondary rounded-md"
                       title="Asignar administrador"
