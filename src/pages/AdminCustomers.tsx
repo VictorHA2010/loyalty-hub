@@ -109,7 +109,7 @@ function CustomerDetail({ businessId, userId }: { businessId: string; userId: st
     try {
       const { error } = await supabase.from('points_ledger').insert({
         business_id: businessId, user_id: userId, points: pts,
-        type: pts > 0 ? 'adjustment' : 'deduction', note: adjustNote || 'Ajuste manual admin',
+        type: 'adjustment', note: adjustNote || 'Ajuste manual admin',
       });
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ['customer-points', businessId, userId] });

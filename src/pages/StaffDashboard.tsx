@@ -189,7 +189,7 @@ function CustomerCard({
             {activity.map((a) => (
               <div key={a.id} className="flex justify-between text-xs border-b border-border py-1">
                 <span className="text-muted-foreground">
-                  {a.type === 'earn' ? '➕' : a.type === 'bonus' ? '🎁' : a.type === 'redeem' ? '🎟️' : '📝'}{' '}
+                  {a.type === 'earn' ? '➕' : a.type === 'bonus' ? '🎁' : a.type === 'redeem' ? '🎟️' : a.type === 'referral' ? '👥' : a.type === 'promotion' ? '🎉' : a.type === 'membership' ? '⭐' : '📝'}{' '}
                   {a.note || a.type}
                 </span>
                 <span className={`font-mono ${a.points >= 0 ? 'text-foreground' : 'text-destructive'}`}>
