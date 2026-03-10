@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { Plus, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import AppLayout from '@/components/AppLayout';
 
@@ -26,18 +26,20 @@ const AdminStaff = () => {
     if (!email.trim() || !businessContext) return;
     setAdding(true);
     try {
-      // Find user by email
-      const { data: profile, error: profileErr } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', email.trim())
-        .single();
-      if (profileErr || !profile) {
-        toast.error('Usuario no encontrado. Debe registrarse primero.');
+      // Use security definer function to find profile by email (bypasses RLS)
+      const { data: profileResult, error: profileErr } = await supabase
+        .rpc('find_profile_by_email', { _email: email.trim() });
+
+      if (profileErr) throw profileErr;
+
+      if (!profileResult || profileResult.length === 0) {
+        toast.error('Usuario no encontrado. El usuario debe registrarse primero en la plataforma.');
         return;
       }
 
-      // Check if already exists
+      const profile = profileResult[0];
+
+      // Check if already exists as staff for this business
       const { data: existing } = await supabase
         .from('user_roles')
         .select('id')
@@ -50,6 +52,7 @@ const AdminStaff = () => {
         return;
       }
 
+      // Insert into user_roles
       const { error: roleErr } = await supabase.from('user_roles').insert({
         user_id: profile.id,
         business_id: businessContext.businessId,
@@ -57,29 +60,45 @@ const AdminStaff = () => {
       });
       if (roleErr) throw roleErr;
 
-      // Also add to business_members
-      await supabase.from('business_members').insert({
+      // Insert into business_members
+      const { error: memberErr } = await supabase.from('business_members').insert({
         user_id: profile.id,
         business_id: businessContext.businessId,
         role: 'staff',
         status: 'active',
       });
+      if (memberErr) {
+        console.warn('business_members insert warning:', memberErr.message);
+      }
 
       queryClient.invalidateQueries({ queryKey: ['business-members'] });
       setEmail('');
       setShowAdd(false);
-      toast.success('Staff agregado');
+      toast.success(`Staff agregado: ${profile.full_name || profile.email}`);
     } catch (err: any) {
-      toast.error(err.message);
+      toast.error(err.message || 'Error al agregar staff');
     } finally {
       setAdding(false);
     }
   };
 
-  const handleRemove = async (id: string) => {
+  const handleRemove = async (member: any) => {
     try {
-      const { error } = await supabase.from('user_roles').delete().eq('id', id);
+      // Remove from user_roles
+      const { error } = await supabase
+        .from('user_roles')
+        .delete()
+        .eq('id', member.id);
       if (error) throw error;
+
+      // Also remove from business_members
+      await supabase
+        .from('business_members')
+        .delete()
+        .eq('user_id', member.user_id)
+        .eq('business_id', member.business_id)
+        .eq('role', 'staff');
+
       queryClient.invalidateQueries({ queryKey: ['business-members'] });
       toast.success('Staff eliminado');
     } catch (err: any) {
@@ -108,7 +127,9 @@ const AdminStaff = () => {
                 placeholder="staff@ejemplo.com"
                 required
               />
-              <p className="text-xs text-muted-foreground">El usuario debe estar registrado previamente.</p>
+              <p className="text-xs text-muted-foreground">
+                El usuario debe haberse registrado previamente en la plataforma.
+              </p>
             </div>
             <div className="flex gap-2">
               <Button type="submit" size="sm" disabled={adding}>
@@ -138,7 +159,7 @@ const AdminStaff = () => {
                     <p className="text-xs text-muted-foreground">{(m.profiles as any)?.email}</p>
                   </div>
                 </div>
-                <button onClick={() => handleRemove(m.id)} className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-secondary rounded-md">
+                <button onClick={() => handleRemove(m)} className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-secondary rounded-md">
                   <Trash2 size={14} />
                 </button>
               </div>
