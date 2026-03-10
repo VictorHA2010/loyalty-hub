@@ -173,7 +173,24 @@ const PlatformDashboard = () => {
                       <p className="text-xs font-mono text-muted-foreground">{biz.slug}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(`${window.location.origin}/b/${biz.slug}`);
+                        toast.success('URL copiada');
+                      }}
+                      className="p-2 text-muted-foreground hover:bg-secondary rounded-md"
+                      title="Copiar enlace"
+                    >
+                      <Copy size={16} />
+                    </button>
+                    <button
+                      onClick={() => navigate(`/platform/business/${biz.id}`)}
+                      className="p-2 text-muted-foreground hover:bg-secondary rounded-md"
+                      title="Personalizar"
+                    >
+                      <Settings2 size={16} />
+                    </button>
                     <button
                       onClick={() => navigate(`/admin/${biz.slug}`)}
                       className="p-2 text-muted-foreground hover:bg-secondary rounded-md"
