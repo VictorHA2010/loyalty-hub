@@ -10,6 +10,9 @@ import {
   QrCode,
   LogOut,
   ArrowLeft,
+  Crown,
+  Sliders,
+  UserCheck,
 } from 'lucide-react';
 
 interface NavItem {
@@ -19,16 +22,19 @@ interface NavItem {
 }
 
 const adminNav: NavItem[] = [
-  { label: 'Actividad', to: '/admin', icon: <LayoutDashboard size={18} /> },
+  { label: 'Dashboard', to: '/admin', icon: <LayoutDashboard size={18} /> },
   { label: 'Recompensas', to: '/admin/rewards', icon: <Gift size={18} /> },
+  { label: 'Staff', to: '/admin/staff', icon: <UserCheck size={18} /> },
   { label: 'Miembros', to: '/admin/members', icon: <Users size={18} /> },
+  { label: 'Clientes', to: '/admin/customers', icon: <Users size={18} /> },
+  { label: 'Membresías', to: '/admin/memberships', icon: <Crown size={18} /> },
   { label: 'Canjes', to: '/admin/redemptions', icon: <History size={18} /> },
+  { label: 'Reglas de puntos', to: '/admin/loyalty', icon: <Sliders size={18} /> },
   { label: 'Configuración', to: '/admin/settings', icon: <Settings size={18} /> },
 ];
 
 const staffNav: NavItem[] = [
-  { label: 'Escanear', to: '/staff', icon: <QrCode size={18} /> },
-  { label: 'Canjes', to: '/staff/redemptions', icon: <History size={18} /> },
+  { label: 'Operaciones', to: '/staff', icon: <QrCode size={18} /> },
 ];
 
 interface AppLayoutProps {
@@ -59,7 +65,7 @@ const AppLayout = ({ children, role }: AppLayoutProps) => {
           </p>
           <p className="text-xs font-mono text-muted-foreground mt-0.5">{role}</p>
         </div>
-        <nav className="flex-1 p-2 space-y-0.5">
+        <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto">
           {navItems.map((item) => (
             <NavLink
               key={item.to}
@@ -99,7 +105,7 @@ const AppLayout = ({ children, role }: AppLayoutProps) => {
       <div className="flex-1 flex flex-col">
         <header className="lg:hidden flex items-center justify-between border-b border-border px-4 py-3 bg-background">
           <p className="text-sm font-semibold text-foreground">{businessContext?.businessName || 'Negocio'}</p>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             {navItems.map((item) => (
               <NavLink
                 key={item.to}
