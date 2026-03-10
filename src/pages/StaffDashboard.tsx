@@ -333,8 +333,8 @@ function ScanTab() {
 
       {/* Camera scanner */}
       <div className="flex gap-2">
-        {!scanning ? (
-          <Button onClick={startCamera} variant="outline" className="w-full">
+        {!wantScan && !scanning ? (
+          <Button onClick={() => setWantScan(true)} variant="outline" className="w-full">
             <Camera size={18} className="mr-2" />
             Abrir cámara
           </Button>
@@ -346,7 +346,7 @@ function ScanTab() {
         )}
       </div>
 
-      {scanning && (
+      {wantScan && (
         <div
           id="qr-reader"
           ref={scannerContainerRef}
