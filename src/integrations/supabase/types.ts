@@ -308,33 +308,77 @@ export type Database = {
           },
         ]
       }
+      loyalty_settings: {
+        Row: {
+          base_points_per_purchase: number
+          business_id: string
+          free_bonus_points: number
+          id: string
+          membership_points_multiplier: number
+          updated_at: string
+        }
+        Insert: {
+          base_points_per_purchase?: number
+          business_id: string
+          free_bonus_points?: number
+          id?: string
+          membership_points_multiplier?: number
+          updated_at?: string
+        }
+        Update: {
+          base_points_per_purchase?: number
+          business_id?: string
+          free_bonus_points?: number
+          id?: string
+          membership_points_multiplier?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_settings_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       memberships: {
         Row: {
+          bonus_points: number
           business_id: string
           created_at: string
           ends_at: string | null
           id: string
+          is_plus: boolean
           plan_name: string | null
+          points_multiplier: number
           started_at: string | null
           status: string
           user_id: string
         }
         Insert: {
+          bonus_points?: number
           business_id: string
           created_at?: string
           ends_at?: string | null
           id?: string
+          is_plus?: boolean
           plan_name?: string | null
+          points_multiplier?: number
           started_at?: string | null
           status?: string
           user_id: string
         }
         Update: {
+          bonus_points?: number
           business_id?: string
           created_at?: string
           ends_at?: string | null
           id?: string
+          is_plus?: boolean
           plan_name?: string | null
+          points_multiplier?: number
           started_at?: string | null
           status?: string
           user_id?: string
