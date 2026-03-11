@@ -227,13 +227,17 @@ const CustomerDashboard = () => {
 };
 
 /* ═══════════════════════════════════════════ HOME TAB ═══════════════════════════════════════════ */
-function HomeTab({ balance, balanceLoading, bonusBalance, bonusLoading, membership, profile, businessName, onNavigate }: any) {
+function HomeTab({ balance, balanceLoading, bonusBalance, bonusLoading, membership, profile, businessName, welcomeMessage, brandColor, onNavigate }: any) {
   return (
     <div className="space-y-5">
+      {/* Welcome message */}
+      {welcomeMessage && (
+        <p className="text-sm text-muted-foreground text-center">{welcomeMessage}</p>
+      )}
       {/* Points Card */}
       <div className="rounded-xl border border-border bg-card p-6 text-center">
         <p className="text-xs text-muted-foreground mb-1">Tus puntos en {businessName}</p>
-        <p className="text-4xl font-bold font-mono text-foreground">
+        <p className="text-4xl font-bold font-mono" style={{ color: brandColor || undefined }}>
           {balanceLoading ? <Skeleton className="h-10 w-24 mx-auto" /> : (balance ?? 0)}
         </p>
         {membership?.status === 'active' && (
