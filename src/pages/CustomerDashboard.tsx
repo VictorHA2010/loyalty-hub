@@ -177,9 +177,10 @@ const CustomerDashboard = () => {
                 onClick={() => setTab(t.key)}
                 className={`flex flex-col items-center gap-1 px-4 py-2.5 text-xs transition-colors border-b-2 whitespace-nowrap ${
                   tab === t.key
-                    ? 'border-primary text-primary'
+                    ? 'border-transparent font-medium'
                     : 'border-transparent text-muted-foreground hover:text-foreground'
                 }`}
+                style={tab === t.key ? { color: business.primary_color || undefined, borderColor: business.primary_color || undefined } : {}}
               >
                 {t.icon}
                 {t.label}
