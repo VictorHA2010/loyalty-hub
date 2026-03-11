@@ -201,6 +201,8 @@ const CustomerDashboard = () => {
             membership={membership}
             profile={profile}
             businessName={business.name}
+            welcomeMessage={business.welcome_message}
+            brandColor={business.primary_color}
             onNavigate={setTab}
           />
         )}
