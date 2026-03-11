@@ -22,6 +22,7 @@ import AdminRedemptions from "./pages/AdminRedemptions";
 import AdminLoyaltySettings from "./pages/AdminLoyaltySettings";
 import AdminSettings from "./pages/AdminSettings";
 import PlatformDashboard from "./pages/PlatformDashboard";
+import PlatformBusinessEdit from "./pages/PlatformBusinessEdit";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -76,6 +77,7 @@ const App = () => (
 
             {/* Platform Admin */}
             <Route path="/platform" element={<RoleRoute allowed={['platform_admin']}><PlatformDashboard /></RoleRoute>} />
+            <Route path="/platform/business/:id" element={<RoleRoute allowed={['platform_admin']}><PlatformBusinessEdit /></RoleRoute>} />
 
             {/* Business routes by slug */}
             <Route path="/b/:slug" element={<BusinessProvider><BusinessLanding /></BusinessProvider>} />

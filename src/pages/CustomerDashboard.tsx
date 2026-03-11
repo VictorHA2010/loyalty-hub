@@ -135,27 +135,33 @@ const CustomerDashboard = () => {
     { key: 'profile', label: 'Perfil', icon: <User size={18} /> },
   ];
 
+  // Dynamic branding styles
+  const brandStyle = {
+    '--brand-primary': business.primary_color || '#6366f1',
+    '--brand-secondary': business.secondary_color || '#f59e0b',
+  } as React.CSSProperties;
+
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col" style={brandStyle}>
       {/* Header */}
-      <header className="bg-card border-b border-border sticky top-0 z-10">
+      <header className="border-b border-border sticky top-0 z-10" style={{ backgroundColor: business.primary_color || undefined }}>
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {business.logo_url ? (
-              <img src={business.logo_url} alt={business.name} className="w-9 h-9 rounded-full object-cover" />
+              <img src={business.logo_url} alt={business.name} className="w-9 h-9 rounded-full object-cover bg-white/20" />
             ) : (
-              <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center">
-                <Building2 size={16} className="text-muted-foreground" />
+              <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
+                <Building2 size={16} className="text-white" />
               </div>
             )}
             <div>
-              <p className="text-xs text-muted-foreground">{business.name}</p>
-              <p className="text-sm font-semibold text-foreground">
+              <p className="text-xs" style={{ color: 'rgba(255,255,255,0.8)' }}>{business.name}</p>
+              <p className="text-sm font-semibold text-white">
                 {profileLoading ? <Skeleton className="h-4 w-24" /> : (profile?.full_name || 'Usuario')}
               </p>
             </div>
           </div>
-          <button onClick={handleSignOut} className="p-2 text-muted-foreground hover:bg-secondary rounded-md" title="Cerrar sesión">
+          <button onClick={handleSignOut} className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-md" title="Cerrar sesión">
             <LogOut size={18} />
           </button>
         </div>
@@ -171,9 +177,10 @@ const CustomerDashboard = () => {
                 onClick={() => setTab(t.key)}
                 className={`flex flex-col items-center gap-1 px-4 py-2.5 text-xs transition-colors border-b-2 whitespace-nowrap ${
                   tab === t.key
-                    ? 'border-primary text-primary'
+                    ? 'border-transparent font-medium'
                     : 'border-transparent text-muted-foreground hover:text-foreground'
                 }`}
+                style={tab === t.key ? { color: business.primary_color || undefined, borderColor: business.primary_color || undefined } : {}}
               >
                 {t.icon}
                 {t.label}
@@ -194,6 +201,8 @@ const CustomerDashboard = () => {
             membership={membership}
             profile={profile}
             businessName={business.name}
+            welcomeMessage={business.welcome_message}
+            brandColor={business.primary_color}
             onNavigate={setTab}
           />
         )}
@@ -218,13 +227,17 @@ const CustomerDashboard = () => {
 };
 
 /* ═══════════════════════════════════════════ HOME TAB ═══════════════════════════════════════════ */
-function HomeTab({ balance, balanceLoading, bonusBalance, bonusLoading, membership, profile, businessName, onNavigate }: any) {
+function HomeTab({ balance, balanceLoading, bonusBalance, bonusLoading, membership, profile, businessName, welcomeMessage, brandColor, onNavigate }: any) {
   return (
     <div className="space-y-5">
+      {/* Welcome message */}
+      {welcomeMessage && (
+        <p className="text-sm text-muted-foreground text-center">{welcomeMessage}</p>
+      )}
       {/* Points Card */}
       <div className="rounded-xl border border-border bg-card p-6 text-center">
         <p className="text-xs text-muted-foreground mb-1">Tus puntos en {businessName}</p>
-        <p className="text-4xl font-bold font-mono text-foreground">
+        <p className="text-4xl font-bold font-mono" style={{ color: brandColor || undefined }}>
           {balanceLoading ? <Skeleton className="h-10 w-24 mx-auto" /> : (balance ?? 0)}
         </p>
         {membership?.status === 'active' && (
