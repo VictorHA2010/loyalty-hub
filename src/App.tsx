@@ -77,6 +77,7 @@ const App = () => (
 
             {/* Platform Admin */}
             <Route path="/platform" element={<RoleRoute allowed={['platform_admin']}><PlatformDashboard /></RoleRoute>} />
+            <Route path="/platform/business/:id" element={<RoleRoute allowed={['platform_admin']}><PlatformBusinessEdit /></RoleRoute>} />
 
             {/* Business routes by slug */}
             <Route path="/b/:slug" element={<BusinessProvider><BusinessLanding /></BusinessProvider>} />
