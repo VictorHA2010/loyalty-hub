@@ -22,6 +22,7 @@ import AdminRedemptions from "./pages/AdminRedemptions";
 import AdminLoyaltySettings from "./pages/AdminLoyaltySettings";
 import AdminSettings from "./pages/AdminSettings";
 import PlatformDashboard from "./pages/PlatformDashboard";
+import PlatformBusinessEdit from "./pages/PlatformBusinessEdit";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
