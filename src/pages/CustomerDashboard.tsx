@@ -9,16 +9,36 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 import {
   Gift, History, LogOut, QrCode, User, Crown, Building2,
   Star, Ticket, Users, CreditCard, Copy, Check, ChevronRight, Shield,
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { QRCodeSVG } from 'qrcode.react';
 
 type TabKey = 'home' | 'qr' | 'rewards' | 'promos' | 'referrals' | 'history' | 'membership' | 'profile';
+
+/* ═══════════ Brand helper ═══════════ */
+function useBrandVars(business: any) {
+  return useMemo(() => {
+    const primary = business?.primary_color || '#1F7A63';
+    const secondary = business?.secondary_color || '#2FA886';
+    const accent = business?.accent_color || '#66C2A5';
+    return {
+      primary,
+      secondary,
+      accent,
+      css: {
+        '--brand-primary': primary,
+        '--brand-secondary': secondary,
+        '--brand-accent': accent,
+      } as React.CSSProperties,
+    };
+  }, [business?.primary_color, business?.secondary_color, business?.accent_color]);
+}
 
 const CustomerDashboard = () => {
   const { user, signOut } = useAuth();
@@ -37,6 +57,7 @@ const CustomerDashboard = () => {
   const { data: bonusBalance, isLoading: bonusLoading } = useBonusPointsBalance(businessId);
   const [tab, setTab] = useState<TabKey>('home');
   const [redeeming, setRedeeming] = useState<string | null>(null);
+  const brand = useBrandVars(business);
 
   useEffect(() => {
     if (user && businessId) {
@@ -133,40 +154,97 @@ const CustomerDashboard = () => {
     { key: 'profile', label: 'Perfil', icon: <User size={18} /> },
   ];
 
-  const brandColor = business.primary_color || 'hsl(160, 60%, 30%)';
-  const brandStyle = {
-    '--brand-primary': brandColor,
-    '--brand-secondary': business.secondary_color || 'hsl(160, 38%, 55%)',
-  } as React.CSSProperties;
-
   return (
-    <div className="min-h-screen bg-background flex flex-col" style={brandStyle}>
-      {/* Header */}
-      <header className="sticky top-0 z-10 shadow-card" style={{ background: `linear-gradient(135deg, ${brandColor}, ${business.secondary_color || brandColor})` }}>
-        <div className="max-w-lg mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {business.logo_url ? (
-              <img src={business.logo_url} alt={business.name} className="w-10 h-10 rounded-xl object-cover ring-2 ring-white/20" />
-            ) : (
-              <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center ring-2 ring-white/10">
-                <Shield size={18} className="text-white" />
+    <div className="min-h-screen bg-background flex flex-col" style={brand.css}>
+      {/* ══════════ Branded Header ══════════ */}
+      <header
+        className="relative overflow-hidden"
+        style={{
+          background: `linear-gradient(135deg, ${brand.primary}, ${brand.secondary})`,
+        }}
+      >
+        {business.banner_image && (
+          <img
+            src={business.banner_image}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover opacity-20 mix-blend-overlay"
+          />
+        )}
+        <div className="relative max-w-lg mx-auto px-4 pt-5 pb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              {business.logo_url ? (
+                <img
+                  src={business.logo_url}
+                  alt={business.name}
+                  className="w-11 h-11 rounded-xl object-cover ring-2 ring-white/25 shadow-lg"
+                />
+              ) : (
+                <div className="w-11 h-11 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center ring-2 ring-white/10">
+                  <Shield size={18} className="text-white" />
+                </div>
+              )}
+              <div>
+                <p className="text-xs font-medium text-white/70">{business.name}</p>
+                <p className="text-sm font-bold text-white">
+                  {profileLoading ? <Skeleton className="h-4 w-24 bg-white/20" /> : `Hola, ${profile?.full_name || 'Usuario'}`}
+                </p>
+              </div>
+            </div>
+            <button onClick={handleSignOut} className="p-2.5 text-white/50 hover:text-white hover:bg-white/10 rounded-xl transition-colors" title="Cerrar sesión">
+              <LogOut size={18} />
+            </button>
+          </div>
+
+          {/* Welcome message */}
+          {business.welcome_message && (
+            <p className="text-xs text-white/60 mb-4">{business.welcome_message}</p>
+          )}
+
+          {/* Inline Points Card */}
+          <div className="rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-medium text-white/60 uppercase tracking-wider">Tus puntos</p>
+                <p className="text-4xl font-extrabold font-mono text-white mt-0.5">
+                  {balanceLoading ? <Skeleton className="h-10 w-24 bg-white/20" /> : (balance ?? 0)}
+                </p>
+              </div>
+              {membership?.status === 'active' && (
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/15 border border-white/10">
+                  <Crown size={13} className="text-white" />
+                  <span className="text-[11px] font-semibold text-white">
+                    {membership.is_plus ? 'Plus' : 'Miembro'}
+                    {membership.points_multiplier > 1 && ` · ${membership.points_multiplier}x`}
+                  </span>
+                </div>
+              )}
+            </div>
+            {/* Progress bar toward next reward */}
+            {rewards && rewards.length > 0 && balance !== undefined && (
+              <div className="mt-4">
+                <div className="flex items-center justify-between mb-1.5">
+                  <p className="text-[10px] text-white/50">Próxima recompensa</p>
+                  <p className="text-[10px] text-white/70 font-mono">{balance}/{rewards[0].points_cost} pts</p>
+                </div>
+                <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{
+                      width: `${Math.min(100, (balance / rewards[0].points_cost) * 100)}%`,
+                      backgroundColor: brand.accent,
+                    }}
+                  />
+                </div>
+                <p className="text-[10px] text-white/40 mt-1">{rewards[0].name}</p>
               </div>
             )}
-            <div>
-              <p className="text-[11px] font-medium" style={{ color: 'rgba(255,255,255,0.7)' }}>{business.name}</p>
-              <p className="text-sm font-bold text-white">
-                {profileLoading ? <Skeleton className="h-4 w-24" /> : (profile?.full_name || 'Usuario')}
-              </p>
-            </div>
           </div>
-          <button onClick={handleSignOut} className="p-2.5 text-white/60 hover:text-white hover:bg-white/10 rounded-xl transition-colors" title="Cerrar sesión">
-            <LogOut size={18} />
-          </button>
         </div>
       </header>
 
-      {/* Tab Navigation */}
-      <nav className="bg-card border-b border-border sticky top-[72px] z-10 shadow-card">
+      {/* ══════════ Tab Navigation ══════════ */}
+      <nav className="bg-card border-b border-border sticky top-0 z-10 shadow-sm">
         <div className="max-w-lg mx-auto overflow-x-auto scrollbar-hide">
           <div className="flex min-w-max">
             {tabs.map((t) => (
@@ -175,9 +253,10 @@ const CustomerDashboard = () => {
                 onClick={() => setTab(t.key)}
                 className={`flex flex-col items-center gap-1 px-4 py-2.5 text-[11px] font-medium transition-colors border-b-2 whitespace-nowrap ${
                   tab === t.key
-                    ? 'border-primary text-primary'
+                    ? 'text-foreground'
                     : 'border-transparent text-muted-foreground hover:text-foreground'
                 }`}
+                style={tab === t.key ? { borderBottomColor: brand.primary, color: brand.primary } : undefined}
               >
                 {t.icon}
                 {t.label}
@@ -187,7 +266,7 @@ const CustomerDashboard = () => {
         </div>
       </nav>
 
-      {/* Content */}
+      {/* ══════════ Content ══════════ */}
       <main className="flex-1 max-w-lg mx-auto w-full px-4 py-6">
         {tab === 'home' && (
           <HomeTab
@@ -198,12 +277,11 @@ const CustomerDashboard = () => {
             membership={membership}
             profile={profile}
             businessName={business.name}
-            welcomeMessage={business.welcome_message}
-            brandColor={brandColor}
+            brand={brand}
             onNavigate={setTab}
           />
         )}
-        {tab === 'qr' && <QRTab qrToken={profile?.qr_token} profileLoading={profileLoading} />}
+        {tab === 'qr' && <QRTab qrToken={profile?.qr_token} profileLoading={profileLoading} brand={brand} businessName={business.name} />}
         {tab === 'rewards' && (
           <RewardsTab
             rewards={rewards}
@@ -211,12 +289,13 @@ const CustomerDashboard = () => {
             balance={balance}
             redeeming={redeeming}
             onRedeem={handleRedeem}
+            brand={brand}
           />
         )}
-        {tab === 'promos' && <PromosTab coupons={coupons} businessId={businessId!} userId={user.id} />}
-        {tab === 'referrals' && <ReferralsTab referrals={referrals} businessId={businessId!} userId={user.id} />}
-        {tab === 'history' && <HistoryTab history={history} redemptions={redemptions} />}
-        {tab === 'membership' && <MembershipTab membership={membership} />}
+        {tab === 'promos' && <PromosTab coupons={coupons} businessId={businessId!} userId={user.id} brand={brand} />}
+        {tab === 'referrals' && <ReferralsTab referrals={referrals} businessId={businessId!} userId={user.id} brand={brand} />}
+        {tab === 'history' && <HistoryTab history={history} redemptions={redemptions} brand={brand} />}
+        {tab === 'membership' && <MembershipTab membership={membership} brand={brand} />}
         {tab === 'profile' && <ProfileTab businessSlug={business.slug} />}
       </main>
     </div>
@@ -224,34 +303,14 @@ const CustomerDashboard = () => {
 };
 
 /* ═══════════════════════════════════════════ HOME TAB ═══════════════════════════════════════════ */
-function HomeTab({ balance, balanceLoading, bonusBalance, bonusLoading, membership, profile, businessName, welcomeMessage, brandColor, onNavigate }: any) {
+function HomeTab({ balance, balanceLoading, bonusBalance, bonusLoading, membership, profile, businessName, brand, onNavigate }: any) {
   return (
     <div className="space-y-5">
-      {welcomeMessage && (
-        <p className="text-sm text-muted-foreground text-center">{welcomeMessage}</p>
-      )}
-      {/* Points Card */}
-      <div className="rounded-2xl bg-card border border-border p-6 text-center shadow-card">
-        <p className="text-xs text-muted-foreground mb-1">Tus puntos en {businessName}</p>
-        <p className="text-5xl font-extrabold font-mono text-primary">
-          {balanceLoading ? <Skeleton className="h-12 w-28 mx-auto" /> : (balance ?? 0)}
-        </p>
-        {membership?.status === 'active' && (
-          <div className="flex items-center justify-center gap-1.5 mt-3">
-            <Crown size={14} className="text-primary" />
-            <span className="text-xs font-semibold text-primary">
-              {membership.is_plus ? 'Miembro Plus' : 'Miembro activo'}
-              {membership.points_multiplier > 1 && ` · ${membership.points_multiplier}x puntos`}
-            </span>
-          </div>
-        )}
-      </div>
-
       {/* Bonus Points */}
-      <div className="rounded-xl bg-card border border-border p-4 shadow-card">
+      <div className="rounded-xl bg-card border border-border p-4 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center">
-            <Gift size={18} className="text-primary" />
+          <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${brand.primary}15` }}>
+            <Gift size={18} style={{ color: brand.primary }} />
           </div>
           <div className="flex-1">
             <p className="text-xs text-muted-foreground">Puntos de regalo</p>
@@ -276,11 +335,11 @@ function HomeTab({ balance, balanceLoading, bonusBalance, bonusLoading, membersh
           <button
             key={action.key}
             onClick={() => onNavigate(action.key)}
-            className="flex items-center gap-3 p-4 rounded-xl border border-border bg-card hover:shadow-card-hover transition-all text-left shadow-card"
+            className="flex items-center gap-3 p-4 rounded-xl border border-border bg-card hover:shadow-md transition-all text-left shadow-sm group"
           >
-            <div className="text-primary">{action.icon}</div>
+            <div style={{ color: brand.primary }}>{action.icon}</div>
             <span className="text-sm font-semibold text-foreground">{action.label}</span>
-            <ChevronRight size={14} className="ml-auto text-muted-foreground" />
+            <ChevronRight size={14} className="ml-auto text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
           </button>
         ))}
       </div>
@@ -289,20 +348,26 @@ function HomeTab({ balance, balanceLoading, bonusBalance, bonusLoading, membersh
 }
 
 /* ═══════════════════════════════════════════ QR TAB ═══════════════════════════════════════════ */
-function QRTab({ qrToken, profileLoading }: { qrToken: string | null | undefined; profileLoading: boolean }) {
+function QRTab({ qrToken, profileLoading, brand, businessName }: { qrToken: string | null | undefined; profileLoading: boolean; brand: any; businessName: string }) {
   if (profileLoading) return <div className="flex justify-center py-12"><Skeleton className="h-48 w-48" /></div>;
 
   return (
     <div className="flex flex-col items-center space-y-5">
-      <p className="text-sm text-muted-foreground text-center">Muestra este código al staff para identificarte</p>
-      <div className="bg-card border border-border rounded-2xl p-8 shadow-card">
+      <div className="rounded-2xl bg-card border border-border p-8 shadow-sm text-center">
+        <div className="w-12 h-12 rounded-full mx-auto mb-4 flex items-center justify-center" style={{ backgroundColor: `${brand.primary}15` }}>
+          <QrCode size={22} style={{ color: brand.primary }} />
+        </div>
         {qrToken ? (
-          <QRCodeSVG value={qrToken} size={200} level="M" />
+          <div className="p-4 bg-white rounded-xl inline-block">
+            <QRCodeSVG value={qrToken} size={200} level="M" fgColor={brand.primary} />
+          </div>
         ) : (
           <div className="w-[200px] h-[200px] flex items-center justify-center">
             <p className="text-sm text-muted-foreground">Generando QR...</p>
           </div>
         )}
+        <p className="text-sm font-medium text-foreground mt-4">Muéstralo en caja para acumular puntos</p>
+        <p className="text-xs text-muted-foreground mt-1">{businessName}</p>
       </div>
       {qrToken && (
         <p className="text-xs font-mono text-muted-foreground break-all text-center max-w-[250px]">{qrToken}</p>
@@ -312,7 +377,7 @@ function QRTab({ qrToken, profileLoading }: { qrToken: string | null | undefined
 }
 
 /* ═══════════════════════════════════════════ REWARDS TAB ═══════════════════════════════════════════ */
-function RewardsTab({ rewards, rewardsLoading, balance, redeeming, onRedeem }: any) {
+function RewardsTab({ rewards, rewardsLoading, balance, redeeming, onRedeem, brand }: any) {
   if (rewardsLoading) {
     return <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-24 w-full rounded-xl" />)}</div>;
   }
@@ -331,28 +396,38 @@ function RewardsTab({ rewards, rewardsLoading, balance, redeeming, onRedeem }: a
       <p className="text-xs text-muted-foreground">Canjea tus puntos por beneficios exclusivos</p>
       {rewards.map((reward: any) => {
         const canRedeem = balance !== undefined && balance >= reward.points_cost;
+        const progress = balance !== undefined ? Math.min(100, (balance / reward.points_cost) * 100) : 0;
         return (
-          <div key={reward.id} className="border border-border rounded-xl p-5 bg-card shadow-card">
+          <div key={reward.id} className="border border-border rounded-xl p-5 bg-card shadow-sm">
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1">
                 <p className="font-semibold text-foreground">{reward.name}</p>
                 {reward.description && <p className="text-sm text-muted-foreground mt-1">{reward.description}</p>}
-                <p className="text-sm font-mono text-primary font-bold mt-2">{reward.points_cost} pts</p>
+                <p className="text-sm font-mono font-bold mt-2" style={{ color: brand.primary }}>{reward.points_cost} pts</p>
               </div>
               <Button
                 size="sm"
                 onClick={() => onRedeem(reward.id, reward.points_cost)}
                 disabled={redeeming === reward.id || !canRedeem}
-                className="font-semibold"
+                className="font-semibold text-white"
+                style={{ backgroundColor: brand.primary }}
               >
                 {redeeming === reward.id ? '...' : 'Canjear'}
               </Button>
             </div>
-            {!canRedeem && (
-              <p className="text-xs text-muted-foreground mt-2">
-                Te faltan {reward.points_cost - (balance ?? 0)} puntos
-              </p>
-            )}
+            <div className="mt-3">
+              <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{ width: `${progress}%`, backgroundColor: brand.accent }}
+                />
+              </div>
+              {!canRedeem && (
+                <p className="text-xs text-muted-foreground mt-1.5">
+                  Te faltan {reward.points_cost - (balance ?? 0)} puntos
+                </p>
+              )}
+            </div>
           </div>
         );
       })}
@@ -361,7 +436,7 @@ function RewardsTab({ rewards, rewardsLoading, balance, redeeming, onRedeem }: a
 }
 
 /* ═══════════════════════════════════════════ PROMOS TAB ═══════════════════════════════════════════ */
-function PromosTab({ coupons, businessId, userId }: { coupons: any; businessId: string; userId: string }) {
+function PromosTab({ coupons, businessId, userId, brand }: { coupons: any; businessId: string; userId: string; brand: any }) {
   const [code, setCode] = useState('');
   const [applying, setApplying] = useState(false);
   const queryClient = useQueryClient();
@@ -403,7 +478,7 @@ function PromosTab({ coupons, businessId, userId }: { coupons: any; businessId: 
 
   return (
     <div className="space-y-5">
-      <div className="rounded-xl border border-border bg-card p-5 space-y-3 shadow-card">
+      <div className="rounded-xl border border-border bg-card p-5 space-y-3 shadow-sm">
         <p className="text-sm font-semibold text-foreground">¿Tienes un código promocional?</p>
         <div className="flex gap-2">
           <input
@@ -412,7 +487,13 @@ function PromosTab({ coupons, businessId, userId }: { coupons: any; businessId: 
             placeholder="Ingresa el código"
             className="flex-1 rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           />
-          <Button size="sm" onClick={handleApplyCode} disabled={applying || !code.trim()} className="font-semibold">
+          <Button
+            size="sm"
+            onClick={handleApplyCode}
+            disabled={applying || !code.trim()}
+            className="font-semibold text-white"
+            style={{ backgroundColor: brand.primary }}
+          >
             {applying ? '...' : 'Aplicar'}
           </Button>
         </div>
@@ -422,13 +503,13 @@ function PromosTab({ coupons, businessId, userId }: { coupons: any; businessId: 
         <div className="space-y-3">
           <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Promociones activas</p>
           {coupons.map((coupon: any) => (
-            <div key={coupon.id} className="border border-border rounded-xl p-5 bg-card shadow-card">
+            <div key={coupon.id} className="border rounded-xl p-5 bg-card shadow-sm" style={{ borderColor: `${brand.accent}40` }}>
               <div className="flex items-start justify-between">
                 <div>
                   <p className="font-bold text-foreground">{coupon.code}</p>
                   {coupon.description && <p className="text-sm text-muted-foreground mt-1">{coupon.description}</p>}
                 </div>
-                <span className="text-sm font-mono text-primary font-bold">
+                <span className="text-sm font-mono font-bold" style={{ color: brand.primary }}>
                   {coupon.discount_type === 'percentage' ? `${coupon.discount_value}%` : `$${coupon.discount_value}`}
                 </span>
               </div>
@@ -446,7 +527,7 @@ function PromosTab({ coupons, businessId, userId }: { coupons: any; businessId: 
 }
 
 /* ═══════════════════════════════════════════ REFERRALS TAB ═══════════════════════════════════════════ */
-function ReferralsTab({ referrals, businessId, userId }: { referrals: any; businessId: string; userId: string }) {
+function ReferralsTab({ referrals, businessId, userId, brand }: { referrals: any; businessId: string; userId: string; brand: any }) {
   const [friendCode, setFriendCode] = useState('');
   const [applying, setApplying] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -504,9 +585,9 @@ function ReferralsTab({ referrals, businessId, userId }: { referrals: any; busin
 
   return (
     <div className="space-y-5">
-      <div className="rounded-2xl border border-border bg-card p-6 text-center space-y-4 shadow-card">
-        <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
-          <Users size={24} className="text-primary" />
+      <div className="rounded-2xl border border-border bg-card p-6 text-center space-y-4 shadow-sm">
+        <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto" style={{ backgroundColor: `${brand.primary}15` }}>
+          <Users size={24} style={{ color: brand.primary }} />
         </div>
         <p className="text-sm font-semibold text-foreground">Tu código de invitación</p>
         {myCode ? (
@@ -523,7 +604,7 @@ function ReferralsTab({ referrals, businessId, userId }: { referrals: any; busin
         <p className="text-xs text-muted-foreground">Comparte este código con tus amigos</p>
       </div>
 
-      <div className="rounded-xl border border-border bg-card p-5 space-y-3 shadow-card">
+      <div className="rounded-xl border border-border bg-card p-5 space-y-3 shadow-sm">
         <p className="text-sm font-semibold text-foreground">¿Tienes un código de un amigo?</p>
         <div className="flex gap-2">
           <input
@@ -532,14 +613,20 @@ function ReferralsTab({ referrals, businessId, userId }: { referrals: any; busin
             placeholder="Código de invitación"
             className="flex-1 rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           />
-          <Button size="sm" onClick={handleApplyFriendCode} disabled={applying || !friendCode.trim()} className="font-semibold">
+          <Button
+            size="sm"
+            onClick={handleApplyFriendCode}
+            disabled={applying || !friendCode.trim()}
+            className="font-semibold text-white"
+            style={{ backgroundColor: brand.primary }}
+          >
             {applying ? '...' : 'Aplicar'}
           </Button>
         </div>
       </div>
 
       {referrals && referrals.length > 0 && (
-        <div className="rounded-xl border border-border bg-card p-5 shadow-card">
+        <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
           <p className="text-xs text-muted-foreground mb-2 font-semibold uppercase tracking-wider">Tus invitaciones</p>
           <p className="text-2xl font-bold font-mono text-foreground">
             {referrals.filter((r: any) => r.status === 'completed').length} completadas
@@ -551,13 +638,13 @@ function ReferralsTab({ referrals, businessId, userId }: { referrals: any; busin
 }
 
 /* ═══════════════════════════════════════════ HISTORY TAB ═══════════════════════════════════════════ */
-function HistoryTab({ history, redemptions }: { history: any; redemptions: any }) {
+function HistoryTab({ history, redemptions, brand }: { history: any; redemptions: any; brand: any }) {
   return (
     <div className="space-y-5">
       <div>
         <p className="text-xs text-muted-foreground mb-3 font-semibold uppercase tracking-wider">Movimientos de puntos</p>
         {history && history.length > 0 ? (
-          <div className="border border-border rounded-xl bg-card overflow-hidden shadow-card">
+          <div className="border border-border rounded-xl bg-card overflow-hidden shadow-sm">
             {history.map((entry: any, i: number) => {
               const typeLabel = entry.type === 'bonus' ? '🎁 Regalo'
                 : entry.type === 'earn' ? '➕ Ganados'
@@ -585,8 +672,10 @@ function HistoryTab({ history, redemptions }: { history: any; redemptions: any }
                       {new Date(entry.created_at).toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' })}
                     </p>
                   </div>
-                  <p className={`text-sm font-mono font-bold ${entry.points >= 0 ? 'text-primary' : 'text-destructive'}`}>
-                    {entry.points >= 0 ? '+' : ''}{entry.points}
+                  <p className={`text-sm font-mono font-bold`} style={{ color: entry.points >= 0 ? brand.primary : undefined }}>
+                    <span className={entry.points < 0 ? 'text-destructive' : ''}>
+                      {entry.points >= 0 ? '+' : ''}{entry.points}
+                    </span>
                   </p>
                 </div>
               );
@@ -603,7 +692,7 @@ function HistoryTab({ history, redemptions }: { history: any; redemptions: any }
       {redemptions && redemptions.length > 0 && (
         <div>
           <p className="text-xs text-muted-foreground mb-3 font-semibold uppercase tracking-wider">Canjes realizados</p>
-          <div className="border border-border rounded-xl bg-card overflow-hidden shadow-card">
+          <div className="border border-border rounded-xl bg-card overflow-hidden shadow-sm">
             {redemptions.map((r: any, i: number) => (
               <div
                 key={r.id}
@@ -632,7 +721,7 @@ function HistoryTab({ history, redemptions }: { history: any; redemptions: any }
 }
 
 /* ═══════════════════════════════════════════ MEMBERSHIP TAB ═══════════════════════════════════════════ */
-function MembershipTab({ membership }: { membership: any }) {
+function MembershipTab({ membership, brand }: { membership: any; brand: any }) {
   if (!membership) {
     return (
       <div className="text-center py-16">
@@ -645,9 +734,9 @@ function MembershipTab({ membership }: { membership: any }) {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl border border-border bg-card p-6 text-center space-y-4 shadow-card">
-        <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
-          <Crown size={24} className="text-primary" />
+      <div className="rounded-2xl border border-border bg-card p-6 text-center space-y-4 shadow-sm">
+        <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto" style={{ backgroundColor: `${brand.primary}15` }}>
+          <Crown size={24} style={{ color: brand.primary }} />
         </div>
         <div>
           <p className="text-lg font-bold text-foreground">
@@ -661,18 +750,18 @@ function MembershipTab({ membership }: { membership: any }) {
         </div>
       </div>
 
-      <div className="rounded-xl border border-border bg-card p-5 space-y-3 shadow-card">
+      <div className="rounded-xl border border-border bg-card p-5 space-y-3 shadow-sm">
         <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Beneficios</p>
         <div className="space-y-2.5">
           {membership.points_multiplier > 1 && (
             <div className="flex items-center gap-2.5">
-              <Star size={14} className="text-primary" />
+              <Star size={14} style={{ color: brand.primary }} />
               <span className="text-sm text-foreground">Multiplicador de puntos: <strong>{membership.points_multiplier}x</strong></span>
             </div>
           )}
           {membership.bonus_points > 0 && (
             <div className="flex items-center gap-2.5">
-              <Gift size={14} className="text-primary" />
+              <Gift size={14} style={{ color: brand.primary }} />
               <span className="text-sm text-foreground">Puntos bonus: <strong>+{membership.bonus_points}</strong></span>
             </div>
           )}
@@ -769,7 +858,7 @@ function ProfileTab({ businessSlug }: { businessSlug: string }) {
         <label className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Email</label>
         <p className="text-sm font-mono text-foreground">{user?.email}</p>
       </div>
-      <Button onClick={handleSave} disabled={saving} className="w-full h-11 font-semibold">
+      <Button onClick={handleSave} disabled={saving} className="w-full">
         {saving ? 'Guardando...' : 'Guardar cambios'}
       </Button>
     </div>

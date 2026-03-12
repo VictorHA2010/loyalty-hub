@@ -61,8 +61,10 @@ const PlatformBusinessEdit = () => {
     name: '',
     slug: '',
     logo_url: '',
-    primary_color: '#6366f1',
-    secondary_color: '#f59e0b',
+    primary_color: '#1F7A63',
+    secondary_color: '#2FA886',
+    accent_color: '#66C2A5',
+    banner_image: '',
     welcome_message: '',
     short_description: '',
     business_type: 'general',
@@ -84,8 +86,10 @@ const PlatformBusinessEdit = () => {
         name: biz.name || '',
         slug: biz.slug || '',
         logo_url: (biz as any).logo_url || '',
-        primary_color: (biz as any).primary_color || '#6366f1',
-        secondary_color: (biz as any).secondary_color || '#f59e0b',
+        primary_color: (biz as any).primary_color || '#1F7A63',
+        secondary_color: (biz as any).secondary_color || '#2FA886',
+        accent_color: (biz as any).accent_color || '#66C2A5',
+        banner_image: (biz as any).banner_image || '',
         welcome_message: (biz as any).welcome_message || '',
         short_description: (biz as any).short_description || '',
         business_type: (biz as any).business_type || 'general',
@@ -116,6 +120,8 @@ const PlatformBusinessEdit = () => {
           logo_url: form.logo_url || null,
           primary_color: form.primary_color,
           secondary_color: form.secondary_color,
+          accent_color: form.accent_color,
+          banner_image: form.banner_image || null,
           welcome_message: form.welcome_message,
           short_description: form.short_description || null,
           business_type: form.business_type,
@@ -282,6 +288,28 @@ const PlatformBusinessEdit = () => {
                 />
               </div>
             </div>
+            <div className="space-y-1">
+              <Label>Color acento</Label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={form.accent_color}
+                  onChange={(e) => setForm({ ...form, accent_color: e.target.value })}
+                  className="w-10 h-10 rounded border border-border cursor-pointer"
+                />
+                <Input
+                  value={form.accent_color}
+                  onChange={(e) => setForm({ ...form, accent_color: e.target.value })}
+                  className="flex-1 font-mono"
+                  placeholder="#66C2A5"
+                />
+              </div>
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label>Imagen de banner (URL)</Label>
+            <Input value={form.banner_image} onChange={(e) => setForm({ ...form, banner_image: e.target.value })} placeholder="https://..." />
+            <p className="text-xs text-muted-foreground">Se mostrará como fondo en el header de la app del cliente.</p>
           </div>
           {/* Preview */}
           <div className="border border-border rounded-md p-4 bg-card">
@@ -292,6 +320,9 @@ const PlatformBusinessEdit = () => {
               </div>
               <div className="flex-1 h-12 rounded-md flex items-center justify-center text-white text-xs font-medium" style={{ backgroundColor: form.secondary_color }}>
                 Secundario
+              </div>
+              <div className="flex-1 h-12 rounded-md flex items-center justify-center text-white text-xs font-medium" style={{ backgroundColor: form.accent_color }}>
+                Acento
               </div>
             </div>
           </div>

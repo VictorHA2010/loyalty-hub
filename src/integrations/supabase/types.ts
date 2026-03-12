@@ -61,7 +61,9 @@ export type Database = {
       }
       businesses: {
         Row: {
+          accent_color: string | null
           active: boolean
+          banner_image: string | null
           business_type: string | null
           created_at: string
           custom_domain: string | null
@@ -75,7 +77,9 @@ export type Database = {
           welcome_message: string | null
         }
         Insert: {
+          accent_color?: string | null
           active?: boolean
+          banner_image?: string | null
           business_type?: string | null
           created_at?: string
           custom_domain?: string | null
@@ -89,7 +93,9 @@ export type Database = {
           welcome_message?: string | null
         }
         Update: {
+          accent_color?: string | null
           active?: boolean
+          banner_image?: string | null
           business_type?: string | null
           created_at?: string
           custom_domain?: string | null

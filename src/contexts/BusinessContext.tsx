@@ -10,6 +10,8 @@ interface Business {
   active: boolean;
   primary_color: string | null;
   secondary_color: string | null;
+  accent_color: string | null;
+  banner_image: string | null;
   welcome_message: string | null;
   short_description: string | null;
   business_type: string | null;
@@ -48,7 +50,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     supabase
       .from('businesses')
-      .select('id, name, slug, logo_url, active, primary_color, secondary_color, welcome_message, short_description, business_type')
+      .select('id, name, slug, logo_url, active, primary_color, secondary_color, accent_color, banner_image, welcome_message, short_description, business_type')
       .eq('slug', slug)
       .single()
       .then(({ data, error: err }) => {
