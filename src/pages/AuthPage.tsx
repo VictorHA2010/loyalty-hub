@@ -58,7 +58,7 @@ const AuthPage = () => {
             {mode === 'login' ? 'Iniciar sesión' : mode === 'register' ? 'Crear cuenta' : 'Recuperar contraseña'}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-
+            ASSYP
           </p>
         </div>
 
