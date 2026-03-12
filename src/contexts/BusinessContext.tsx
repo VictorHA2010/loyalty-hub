@@ -96,6 +96,70 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
   }, [business]);
 
+  // Dynamic PWA manifest based on business
+  useEffect(() => {
+    const defaultManifest = '/manifest.json';
+
+    if (!business) {
+      // Reset to default manifest
+      const existing = document.querySelector("link[rel='manifest']");
+      if (existing) existing.setAttribute('href', defaultManifest);
+      return;
+    }
+
+    const iconSrc = business.logo_url || '/icons/icon-512x512.png';
+
+    const manifest = {
+      name: business.name,
+      short_name: business.name.length > 12 ? business.name.substring(0, 12) : business.name,
+      description: business.short_description || `Programa de lealtad de ${business.name}`,
+      start_url: `/b/${business.slug}`,
+      scope: `/b/${business.slug}`,
+      display: 'standalone',
+      background_color: '#ffffff',
+      theme_color: business.primary_color || '#6366f1',
+      icons: [
+        { src: iconSrc, sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+        { src: iconSrc, sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+      ],
+    };
+
+    const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    let link = document.querySelector("link[rel='manifest']") as HTMLLinkElement | null;
+    if (!link) {
+      link = document.createElement('link');
+      link.rel = 'manifest';
+      document.head.appendChild(link);
+    }
+    link.href = url;
+
+    // Also update apple-touch-icon for iOS
+    let appleIcon = document.querySelector("link[rel='apple-touch-icon']") as HTMLLinkElement | null;
+    if (!appleIcon) {
+      appleIcon = document.createElement('link');
+      appleIcon.rel = 'apple-touch-icon';
+      document.head.appendChild(appleIcon);
+    }
+    appleIcon.href = iconSrc;
+
+    // Update theme-color meta
+    let themeMeta = document.querySelector("meta[name='theme-color']") as HTMLMetaElement | null;
+    if (!themeMeta) {
+      themeMeta = document.createElement('meta');
+      themeMeta.name = 'theme-color';
+      document.head.appendChild(themeMeta);
+    }
+    themeMeta.content = business.primary_color || '#6366f1';
+
+    return () => {
+      URL.revokeObjectURL(url);
+      if (link) link.href = defaultManifest;
+      if (appleIcon) appleIcon.href = '/icons/icon-192x192.png';
+    };
+  }, [business]);
+
   return (
     <BusinessCtx.Provider value={{ business, loading, error }}>
       {children}
