@@ -279,6 +279,13 @@ const CustomerDashboard = () => {
             businessName={business.name}
             brand={brand}
             onNavigate={setTab}
+            banner={{
+              active: business.banner_active,
+              image: business.banner_image,
+              title: business.banner_title,
+              description: business.banner_description,
+              link: business.banner_link,
+            }}
           />
         )}
         {tab === 'qr' && <QRTab qrToken={profile?.qr_token} profileLoading={profileLoading} brand={brand} businessName={business.name} />}
@@ -303,9 +310,52 @@ const CustomerDashboard = () => {
 };
 
 /* ═══════════════════════════════════════════ HOME TAB ═══════════════════════════════════════════ */
-function HomeTab({ balance, balanceLoading, bonusBalance, bonusLoading, membership, profile, businessName, brand, onNavigate }: any) {
+function HomeTab({ balance, balanceLoading, bonusBalance, bonusLoading, membership, profile, businessName, brand, onNavigate, banner }: any) {
   return (
     <div className="space-y-5">
+      {/* Promotional Banner */}
+      {banner?.active && (banner?.title || banner?.image) && (
+        <div className="rounded-2xl overflow-hidden shadow-sm border border-border bg-card">
+          {banner.image && (
+            <div className="relative">
+              <img src={banner.image} alt={banner.title || 'Promoción'} className="w-full h-40 object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 p-4">
+                {banner.title && <p className="text-base font-bold text-white">{banner.title}</p>}
+                {banner.description && <p className="text-xs text-white/80 mt-0.5">{banner.description}</p>}
+                {banner.link && (
+                  <a
+                    href={banner.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block mt-2 px-4 py-1.5 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90"
+                    style={{ backgroundColor: brand.primary }}
+                  >
+                    Ver más
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+          {!banner.image && (
+            <div className="p-5" style={{ background: `linear-gradient(135deg, ${brand.primary}15, ${brand.accent}15)` }}>
+              {banner.title && <p className="text-base font-bold text-foreground">{banner.title}</p>}
+              {banner.description && <p className="text-xs text-muted-foreground mt-1">{banner.description}</p>}
+              {banner.link && (
+                <a
+                  href={banner.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block mt-3 px-4 py-1.5 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90"
+                  style={{ backgroundColor: brand.primary }}
+                >
+                  Ver más
+                </a>
+              )}
+            </div>
+          )}
+        </div>
+      )}
       {/* Bonus Points */}
       <div className="rounded-xl bg-card border border-border p-4 shadow-sm">
         <div className="flex items-center gap-3">
