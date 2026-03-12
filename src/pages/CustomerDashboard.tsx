@@ -279,6 +279,13 @@ const CustomerDashboard = () => {
             businessName={business.name}
             brand={brand}
             onNavigate={setTab}
+            banner={{
+              active: business.banner_active,
+              image: business.banner_image,
+              title: business.banner_title,
+              description: business.banner_description,
+              link: business.banner_link,
+            }}
           />
         )}
         {tab === 'qr' && <QRTab qrToken={profile?.qr_token} profileLoading={profileLoading} brand={brand} businessName={business.name} />}
