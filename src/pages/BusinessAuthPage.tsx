@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { Building2 } from 'lucide-react';
+import { Building2, Shield } from 'lucide-react';
 
 const BusinessAuthPage = () => {
   const { business, loading: bizLoading, error: bizError } = useBusiness();
@@ -24,7 +24,6 @@ const BusinessAuthPage = () => {
 
   useEffect(() => {
     if (user && business) {
-      // Auto-link customer to business and redirect
       autoLinkAndRedirect();
     }
   }, [user, business]);
@@ -32,7 +31,6 @@ const BusinessAuthPage = () => {
   const autoLinkAndRedirect = async () => {
     if (!user || !business) return;
     try {
-      // Check if already linked
       const { data: existing } = await supabase
         .from('customer_businesses')
         .select('id')
@@ -47,7 +45,6 @@ const BusinessAuthPage = () => {
         });
       }
 
-      // Check if user has a role for this business (staff/admin)
       const { data: roles } = await supabase
         .from('user_roles')
         .select('role')
@@ -81,7 +78,6 @@ const BusinessAuthPage = () => {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast.success('Sesión iniciada');
-        // useEffect will handle redirect
       } else if (mode === 'register') {
         const { data: signUpData, error } = await supabase.auth.signUp({
           email,
@@ -92,11 +88,8 @@ const BusinessAuthPage = () => {
           },
         });
         if (error) throw error;
-
-        // If auto-confirm is on, the user is immediately logged in
         if (signUpData.user && signUpData.session) {
           toast.success('Cuenta creada');
-          // useEffect will handle auto-link and redirect
         } else {
           toast.success('Cuenta creada. Revisa tu email para confirmar.');
         }
@@ -127,25 +120,27 @@ const BusinessAuthPage = () => {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="text-center space-y-4">
-          <Building2 size={48} className="mx-auto text-muted-foreground" />
-          <h1 className="text-xl font-semibold text-foreground">Negocio no encontrado</h1>
+          <Building2 size={48} className="mx-auto text-muted-foreground/30" />
+          <h1 className="text-xl font-bold text-foreground">Negocio no encontrado</h1>
         </div>
       </div>
     );
   }
 
+  const brandColor = business.primary_color || undefined;
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="w-full max-w-sm space-y-6 px-4">
+      <div className="w-full max-w-sm space-y-8 px-4">
         <div className="text-center">
           {business.logo_url ? (
-            <img src={business.logo_url} alt={business.name} className="w-16 h-16 rounded-full mx-auto object-cover mb-3" />
+            <img src={business.logo_url} alt={business.name} className="w-16 h-16 rounded-2xl mx-auto object-cover mb-4 shadow-card" />
           ) : (
-            <div className="w-16 h-16 rounded-full bg-secondary mx-auto flex items-center justify-center mb-3">
-              <Building2 size={24} className="text-muted-foreground" />
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 mx-auto flex items-center justify-center mb-4 shadow-card">
+              <Shield size={24} className="text-primary" />
             </div>
           )}
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+          <h1 className="text-2xl font-bold text-foreground">
             {mode === 'login' ? 'Iniciar sesión' : mode === 'register' ? 'Crear cuenta' : 'Recuperar contraseña'}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">{business.name}</p>
@@ -155,42 +150,47 @@ const BusinessAuthPage = () => {
           {mode === 'register' && (
             <div className="space-y-2">
               <Label htmlFor="fullName">Nombre completo</Label>
-              <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Tu nombre" required />
+              <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Tu nombre" required className="h-11" />
             </div>
           )}
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="correo@ejemplo.com" required />
+            <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="correo@ejemplo.com" required className="h-11" />
           </div>
           {mode !== 'forgot' && (
             <div className="space-y-2">
               <Label htmlFor="password">Contraseña</Label>
-              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6} />
+              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6} className="h-11" />
             </div>
           )}
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Cargando...' : mode === 'login' ? 'Entrar' : mode === 'register' ? 'Registrarse' : 'Enviar enlace'}
+          <Button
+            type="submit"
+            className="w-full h-11 font-semibold"
+            disabled={loading}
+            style={brandColor ? { backgroundColor: brandColor } : {}}
+          >
+            {loading ? 'Cargando...' : mode === 'login' ? 'Iniciar sesión' : mode === 'register' ? 'Crear cuenta' : 'Enviar enlace'}
           </Button>
         </form>
 
         <div className="text-center space-y-2">
           {mode === 'login' && (
             <>
-              <button type="button" onClick={() => setMode('forgot')} className="text-sm text-primary hover:underline block mx-auto">
+              <button type="button" onClick={() => setMode('forgot')} className="text-sm text-muted-foreground hover:text-primary transition-colors block mx-auto">
                 ¿Olvidaste tu contraseña?
               </button>
-              <button type="button" onClick={() => setMode('register')} className="text-sm text-primary hover:underline block mx-auto">
+              <button type="button" onClick={() => setMode('register')} className="text-sm text-primary font-semibold hover:underline block mx-auto">
                 ¿No tienes cuenta? Regístrate
               </button>
             </>
           )}
           {mode === 'register' && (
-            <button type="button" onClick={() => setMode('login')} className="text-sm text-primary hover:underline">
+            <button type="button" onClick={() => setMode('login')} className="text-sm text-primary font-semibold hover:underline">
               ¿Ya tienes cuenta? Inicia sesión
             </button>
           )}
           {mode === 'forgot' && (
-            <button type="button" onClick={() => setMode('login')} className="text-sm text-primary hover:underline">
+            <button type="button" onClick={() => setMode('login')} className="text-sm text-primary font-semibold hover:underline">
               Volver a iniciar sesión
             </button>
           )}
