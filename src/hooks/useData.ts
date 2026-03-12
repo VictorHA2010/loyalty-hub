@@ -434,6 +434,23 @@ export function useBonusPointsMetrics(businessId: string | undefined) {
   };
 }
 
+// Membership plans (catalog)
+export function useMembershipPlans(businessId: string | undefined) {
+  return useQuery({
+    queryKey: ['membership-plans', businessId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('membership_plans')
+        .select('*')
+        .eq('business_id', businessId!)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!businessId,
+  });
+}
+
 // Customer referrals
 export function useCustomerReferrals(businessId: string | undefined) {
   const { user } = useAuth();
