@@ -10,6 +10,8 @@ interface Business {
   active: boolean;
   primary_color: string | null;
   secondary_color: string | null;
+  accent_color: string | null;
+  banner_image: string | null;
   welcome_message: string | null;
   short_description: string | null;
   business_type: string | null;
