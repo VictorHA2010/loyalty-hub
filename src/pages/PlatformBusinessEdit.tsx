@@ -288,6 +288,28 @@ const PlatformBusinessEdit = () => {
                 />
               </div>
             </div>
+            <div className="space-y-1">
+              <Label>Color acento</Label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={form.accent_color}
+                  onChange={(e) => setForm({ ...form, accent_color: e.target.value })}
+                  className="w-10 h-10 rounded border border-border cursor-pointer"
+                />
+                <Input
+                  value={form.accent_color}
+                  onChange={(e) => setForm({ ...form, accent_color: e.target.value })}
+                  className="flex-1 font-mono"
+                  placeholder="#66C2A5"
+                />
+              </div>
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label>Imagen de banner (URL)</Label>
+            <Input value={form.banner_image} onChange={(e) => setForm({ ...form, banner_image: e.target.value })} placeholder="https://..." />
+            <p className="text-xs text-muted-foreground">Se mostrará como fondo en el header de la app del cliente.</p>
           </div>
           {/* Preview */}
           <div className="border border-border rounded-md p-4 bg-card">
