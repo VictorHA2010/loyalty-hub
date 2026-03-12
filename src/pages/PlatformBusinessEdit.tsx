@@ -120,6 +120,8 @@ const PlatformBusinessEdit = () => {
           logo_url: form.logo_url || null,
           primary_color: form.primary_color,
           secondary_color: form.secondary_color,
+          accent_color: form.accent_color,
+          banner_image: form.banner_image || null,
           welcome_message: form.welcome_message,
           short_description: form.short_description || null,
           business_type: form.business_type,
