@@ -386,6 +386,50 @@ export type Database = {
           },
         ]
       }
+      membership_plans: {
+        Row: {
+          active: boolean
+          bonus_points: number
+          business_id: string
+          created_at: string
+          description: string | null
+          id: string
+          is_plus: boolean
+          name: string
+          points_multiplier: number
+        }
+        Insert: {
+          active?: boolean
+          bonus_points?: number
+          business_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_plus?: boolean
+          name: string
+          points_multiplier?: number
+        }
+        Update: {
+          active?: boolean
+          bonus_points?: number
+          business_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_plus?: boolean
+          name?: string
+          points_multiplier?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "membership_plans_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       memberships: {
         Row: {
           bonus_points: number
@@ -394,6 +438,7 @@ export type Database = {
           ends_at: string | null
           id: string
           is_plus: boolean
+          plan_id: string | null
           plan_name: string | null
           points_multiplier: number
           started_at: string | null
@@ -407,6 +452,7 @@ export type Database = {
           ends_at?: string | null
           id?: string
           is_plus?: boolean
+          plan_id?: string | null
           plan_name?: string | null
           points_multiplier?: number
           started_at?: string | null
@@ -420,6 +466,7 @@ export type Database = {
           ends_at?: string | null
           id?: string
           is_plus?: boolean
+          plan_id?: string | null
           plan_name?: string | null
           points_multiplier?: number
           started_at?: string | null
@@ -432,6 +479,13 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "memberships_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "membership_plans"
             referencedColumns: ["id"]
           },
           {
