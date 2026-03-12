@@ -321,6 +321,9 @@ const PlatformBusinessEdit = () => {
               <div className="flex-1 h-12 rounded-md flex items-center justify-center text-white text-xs font-medium" style={{ backgroundColor: form.secondary_color }}>
                 Secundario
               </div>
+              <div className="flex-1 h-12 rounded-md flex items-center justify-center text-white text-xs font-medium" style={{ backgroundColor: form.accent_color }}>
+                Acento
+              </div>
             </div>
           </div>
         </section>
