@@ -315,22 +315,30 @@ function ScanTab() {
   };
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-lg font-bold text-foreground">Escanear QR</h2>
+    <div className="space-y-5">
+      {/* Hero scan button */}
+      {!wantScan && !scanning && !scannedUser && (
+        <div className="text-center py-6">
+          <button
+            onClick={startCamera}
+            className="w-28 h-28 rounded-3xl bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all hover:scale-105 flex flex-col items-center justify-center gap-2 mx-auto"
+          >
+            <Camera size={36} />
+            <span className="text-xs font-bold">Escanear</span>
+          </button>
+          <p className="text-sm text-muted-foreground mt-4">Escanea el QR del cliente para asignar puntos</p>
+        </div>
+      )}
 
-      <div className="flex gap-2">
-        {!wantScan && !scanning ? (
-          <Button onClick={startCamera} variant="outline" className="w-full h-11 font-semibold">
-            <Camera size={18} className="mr-2" />
-            Abrir cámara
-          </Button>
-        ) : (
+      {(wantScan || scanning) && !scannedUser && (
+        <div className="space-y-3">
+          <h2 className="text-lg font-bold text-foreground">Escanear QR</h2>
           <Button onClick={stopCamera} variant="outline" className="w-full h-11 font-semibold">
             <StopCircle size={18} className="mr-2" />
             Detener cámara
           </Button>
-        )}
-      </div>
+        </div>
+      )}
 
       {wantScan && (
         <div
