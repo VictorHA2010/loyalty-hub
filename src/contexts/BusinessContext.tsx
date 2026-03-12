@@ -71,6 +71,31 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return () => { cancelled = true; };
   }, [slug]);
 
+  // Dynamic favicon based on business logo
+  useEffect(() => {
+    const link: HTMLLinkElement =
+      document.querySelector("link[rel~='icon']") ||
+      (() => {
+        const el = document.createElement('link');
+        el.rel = 'icon';
+        document.head.appendChild(el);
+        return el;
+      })();
+
+    if (business?.logo_url) {
+      link.href = business.logo_url;
+      link.type = 'image/png';
+    } else {
+      link.href = '/favicon.ico';
+      link.type = 'image/x-icon';
+    }
+
+    return () => {
+      link.href = '/favicon.ico';
+      link.type = 'image/x-icon';
+    };
+  }, [business]);
+
   return (
     <BusinessCtx.Provider value={{ business, loading, error }}>
       {children}
