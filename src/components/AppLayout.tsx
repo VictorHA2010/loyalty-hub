@@ -14,10 +14,13 @@ import {
   Crown,
   Sliders,
   UserCheck,
-  Link as LinkIcon,
   Copy,
+  Shield,
+  Menu,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useState } from 'react';
 
 interface NavItem {
   label: string;
@@ -58,6 +61,7 @@ const AppLayout = ({ children, role }: AppLayoutProps) => {
   const navItems = role === 'admin' ? getAdminNav(slug || '') : getStaffNav(slug || '');
   const businessName = business?.name || 'Negocio';
   const publicUrl = `${window.location.origin}/b/${slug}`;
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
@@ -75,97 +79,125 @@ const AppLayout = ({ children, role }: AppLayoutProps) => {
 
   const basePath = role === 'admin' ? `/admin/${slug}` : `/staff/${slug}`;
 
+  const sidebarContent = (
+    <>
+      {/* Logo area */}
+      <div className="p-5 border-b border-sidebar-border">
+        <div className="flex items-center gap-2.5 mb-3">
+          <div className="w-8 h-8 rounded-lg bg-sidebar-primary/20 flex items-center justify-center">
+            <Shield size={16} className="text-sidebar-primary" />
+          </div>
+          <span className="text-sm font-bold text-sidebar-foreground tracking-tight">LoyaltyHub</span>
+        </div>
+        <div className="bg-sidebar-accent rounded-lg px-3 py-2">
+          <p className="text-xs font-semibold text-sidebar-foreground truncate">{businessName}</p>
+          <p className="text-[10px] font-mono text-sidebar-muted mt-0.5 uppercase tracking-wider">{role === 'admin' ? 'Administrador' : 'Staff'}</p>
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        <p className="text-[10px] font-semibold text-sidebar-muted uppercase tracking-wider px-3 mb-2">Menú</p>
+        {navItems.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.to === basePath}
+            onClick={() => setMobileOpen(false)}
+            className={({ isActive }) =>
+              `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
+                isActive
+                  ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-sm'
+                  : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent'
+              }`
+            }
+          >
+            {item.icon}
+            {item.label}
+          </NavLink>
+        ))}
+      </nav>
+
+      {/* URL section */}
+      {role === 'admin' && (
+        <div className="px-4 py-3 border-t border-sidebar-border">
+          <p className="text-[10px] font-semibold text-sidebar-muted uppercase tracking-wider mb-1.5">URL pública</p>
+          <div className="flex items-center gap-1.5">
+            <code className="text-xs font-mono text-sidebar-foreground/60 truncate flex-1">/b/{slug}</code>
+            <button onClick={copyPublicUrl} className="p-1.5 text-sidebar-muted hover:text-sidebar-foreground rounded-md hover:bg-sidebar-accent transition-colors" title="Copiar URL">
+              <Copy size={13} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Footer actions */}
+      <div className="px-3 py-3 border-t border-sidebar-border space-y-0.5">
+        {globalRole === 'platform_admin' ? (
+          <button
+            onClick={() => { navigate('/platform'); setMobileOpen(false); }}
+            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent w-full transition-colors"
+          >
+            <ArrowLeft size={18} />
+            Plataforma
+          </button>
+        ) : (
+          <button
+            onClick={() => { handleSwitchBusiness(); setMobileOpen(false); }}
+            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent w-full transition-colors"
+          >
+            <ArrowLeft size={18} />
+            Cambiar negocio
+          </button>
+        )}
+        <button
+          onClick={handleSignOut}
+          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent w-full transition-colors"
+        >
+          <LogOut size={18} />
+          Cerrar sesión
+        </button>
+      </div>
+    </>
+  );
+
   return (
     <div className="flex min-h-screen bg-background">
-      <aside className="hidden lg:flex w-60 flex-col border-r border-border bg-sidebar">
-        <div className="p-4 border-b border-border">
-          <p className="text-sm font-semibold text-foreground truncate">{businessName}</p>
-          <p className="text-xs font-mono text-muted-foreground mt-0.5">{role}</p>
-        </div>
-        <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === basePath}
-              className={({ isActive }) =>
-                `flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
-                  isActive
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-foreground hover:bg-secondary'
-                }`
-              }
-            >
-              {item.icon}
-              {item.label}
-            </NavLink>
-          ))}
-        </nav>
-
-        {role === 'admin' && (
-          <div className="p-3 border-t border-border">
-            <p className="text-xs text-muted-foreground mb-1">URL pública del negocio</p>
-            <div className="flex items-center gap-1">
-              <code className="text-xs font-mono text-foreground truncate flex-1">/b/{slug}</code>
-              <button onClick={copyPublicUrl} className="p-1 text-muted-foreground hover:text-foreground rounded" title="Copiar URL">
-                <Copy size={14} />
-              </button>
-            </div>
-          </div>
-        )}
-
-        <div className="p-2 border-t border-border space-y-0.5">
-          {globalRole === 'platform_admin' ? (
-            <button
-              onClick={() => navigate('/platform')}
-              className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-secondary w-full transition-colors"
-            >
-              <ArrowLeft size={18} />
-              Volver a Plataforma
-            </button>
-          ) : (
-            <button
-              onClick={handleSwitchBusiness}
-              className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-secondary w-full transition-colors"
-            >
-              <ArrowLeft size={18} />
-              Cambiar negocio
-            </button>
-          )}
-          <button
-            onClick={handleSignOut}
-            className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-secondary w-full transition-colors"
-          >
-            <LogOut size={18} />
-            Cerrar sesión
-          </button>
-        </div>
+      {/* Desktop sidebar */}
+      <aside className="hidden lg:flex w-64 flex-col bg-sidebar fixed inset-y-0 left-0 z-30">
+        {sidebarContent}
       </aside>
 
-      <div className="flex-1 flex flex-col">
-        <header className="lg:hidden flex items-center justify-between border-b border-border px-4 py-3 bg-background">
-          <p className="text-sm font-semibold text-foreground">{businessName}</p>
-          <div className="flex items-center gap-1">
-            {navItems.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.to === basePath}
-                className={({ isActive }) =>
-                  `p-2 rounded-md transition-colors ${
-                    isActive ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-secondary'
-                  }`
-                }
-              >
-                {item.icon}
-              </NavLink>
-            ))}
-            <button onClick={handleSignOut} className="p-2 text-muted-foreground hover:bg-secondary rounded-md">
-              <LogOut size={18} />
-            </button>
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-40 lg:hidden">
+          <div className="absolute inset-0 bg-foreground/40 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
+          <aside className="absolute left-0 top-0 bottom-0 w-64 flex flex-col bg-sidebar shadow-elevated animate-slide-up">
+            <div className="absolute top-3 right-3">
+              <button onClick={() => setMobileOpen(false)} className="p-1.5 text-sidebar-muted hover:text-sidebar-foreground rounded-md">
+                <X size={18} />
+              </button>
+            </div>
+            {sidebarContent}
+          </aside>
+        </div>
+      )}
+
+      {/* Main content */}
+      <div className="flex-1 flex flex-col lg:ml-64">
+        <header className="lg:hidden flex items-center justify-between border-b border-border px-4 py-3 bg-card shadow-card sticky top-0 z-20">
+          <button onClick={() => setMobileOpen(true)} className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted transition-colors">
+            <Menu size={20} />
+          </button>
+          <div className="flex items-center gap-2">
+            <Shield size={16} className="text-primary" />
+            <span className="text-sm font-bold text-foreground">LoyaltyHub</span>
           </div>
+          <button onClick={handleSignOut} className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted transition-colors">
+            <LogOut size={18} />
+          </button>
         </header>
-        <main className="flex-1 p-4 lg:p-6 overflow-auto">
+        <main className="flex-1 p-4 lg:p-8 overflow-auto">
           {children}
         </main>
       </div>

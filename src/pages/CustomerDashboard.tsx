@@ -12,7 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import {
   Gift, History, LogOut, QrCode, User, Crown, Building2,
-  Star, Ticket, Users, CreditCard, Copy, Check, ChevronRight,
+  Star, Ticket, Users, CreditCard, Copy, Check, ChevronRight, Shield,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -38,7 +38,6 @@ const CustomerDashboard = () => {
   const [tab, setTab] = useState<TabKey>('home');
   const [redeeming, setRedeeming] = useState<string | null>(null);
 
-  // Auto-link customer to business
   useEffect(() => {
     if (user && businessId) {
       supabase
@@ -58,7 +57,6 @@ const CustomerDashboard = () => {
     }
   }, [user, businessId]);
 
-  // Auto-create referral code
   useEffect(() => {
     if (user && businessId && referrals !== undefined) {
       if (!referrals || referrals.length === 0) {
@@ -88,7 +86,7 @@ const CustomerDashboard = () => {
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="text-center space-y-4">
           <Building2 size={48} className="mx-auto text-muted-foreground" />
-          <h1 className="text-xl font-semibold text-foreground">Negocio no encontrado</h1>
+          <h1 className="text-xl font-bold text-foreground">Negocio no encontrado</h1>
         </div>
       </div>
     );
@@ -127,60 +125,59 @@ const CustomerDashboard = () => {
   const tabs: { key: TabKey; label: string; icon: React.ReactNode }[] = [
     { key: 'home', label: 'Inicio', icon: <Star size={18} /> },
     { key: 'qr', label: 'Mi QR', icon: <QrCode size={18} /> },
-    { key: 'rewards', label: 'Recompensas', icon: <Gift size={18} /> },
-    { key: 'promos', label: 'Promociones', icon: <Ticket size={18} /> },
+    { key: 'rewards', label: 'Premios', icon: <Gift size={18} /> },
+    { key: 'promos', label: 'Promos', icon: <Ticket size={18} /> },
     { key: 'referrals', label: 'Invitar', icon: <Users size={18} /> },
     { key: 'history', label: 'Historial', icon: <History size={18} /> },
     { key: 'membership', label: 'Membresía', icon: <CreditCard size={18} /> },
     { key: 'profile', label: 'Perfil', icon: <User size={18} /> },
   ];
 
-  // Dynamic branding styles
+  const brandColor = business.primary_color || 'hsl(160, 60%, 30%)';
   const brandStyle = {
-    '--brand-primary': business.primary_color || '#6366f1',
-    '--brand-secondary': business.secondary_color || '#f59e0b',
+    '--brand-primary': brandColor,
+    '--brand-secondary': business.secondary_color || 'hsl(160, 38%, 55%)',
   } as React.CSSProperties;
 
   return (
     <div className="min-h-screen bg-background flex flex-col" style={brandStyle}>
       {/* Header */}
-      <header className="border-b border-border sticky top-0 z-10" style={{ backgroundColor: business.primary_color || undefined }}>
-        <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
+      <header className="sticky top-0 z-10 shadow-card" style={{ background: `linear-gradient(135deg, ${brandColor}, ${business.secondary_color || brandColor})` }}>
+        <div className="max-w-lg mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {business.logo_url ? (
-              <img src={business.logo_url} alt={business.name} className="w-9 h-9 rounded-full object-cover bg-white/20" />
+              <img src={business.logo_url} alt={business.name} className="w-10 h-10 rounded-xl object-cover ring-2 ring-white/20" />
             ) : (
-              <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
-                <Building2 size={16} className="text-white" />
+              <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center ring-2 ring-white/10">
+                <Shield size={18} className="text-white" />
               </div>
             )}
             <div>
-              <p className="text-xs" style={{ color: 'rgba(255,255,255,0.8)' }}>{business.name}</p>
-              <p className="text-sm font-semibold text-white">
+              <p className="text-[11px] font-medium" style={{ color: 'rgba(255,255,255,0.7)' }}>{business.name}</p>
+              <p className="text-sm font-bold text-white">
                 {profileLoading ? <Skeleton className="h-4 w-24" /> : (profile?.full_name || 'Usuario')}
               </p>
             </div>
           </div>
-          <button onClick={handleSignOut} className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-md" title="Cerrar sesión">
+          <button onClick={handleSignOut} className="p-2.5 text-white/60 hover:text-white hover:bg-white/10 rounded-xl transition-colors" title="Cerrar sesión">
             <LogOut size={18} />
           </button>
         </div>
       </header>
 
-      {/* Tab Navigation - Scrollable */}
-      <nav className="bg-card border-b border-border sticky top-[57px] z-10">
+      {/* Tab Navigation */}
+      <nav className="bg-card border-b border-border sticky top-[72px] z-10 shadow-card">
         <div className="max-w-lg mx-auto overflow-x-auto scrollbar-hide">
           <div className="flex min-w-max">
             {tabs.map((t) => (
               <button
                 key={t.key}
                 onClick={() => setTab(t.key)}
-                className={`flex flex-col items-center gap-1 px-4 py-2.5 text-xs transition-colors border-b-2 whitespace-nowrap ${
+                className={`flex flex-col items-center gap-1 px-4 py-2.5 text-[11px] font-medium transition-colors border-b-2 whitespace-nowrap ${
                   tab === t.key
-                    ? 'border-transparent font-medium'
+                    ? 'border-primary text-primary'
                     : 'border-transparent text-muted-foreground hover:text-foreground'
                 }`}
-                style={tab === t.key ? { color: business.primary_color || undefined, borderColor: business.primary_color || undefined } : {}}
               >
                 {t.icon}
                 {t.label}
@@ -191,7 +188,7 @@ const CustomerDashboard = () => {
       </nav>
 
       {/* Content */}
-      <main className="flex-1 max-w-lg mx-auto w-full px-4 py-5">
+      <main className="flex-1 max-w-lg mx-auto w-full px-4 py-6">
         {tab === 'home' && (
           <HomeTab
             balance={balance}
@@ -202,7 +199,7 @@ const CustomerDashboard = () => {
             profile={profile}
             businessName={business.name}
             welcomeMessage={business.welcome_message}
-            brandColor={business.primary_color}
+            brandColor={brandColor}
             onNavigate={setTab}
           />
         )}
@@ -230,20 +227,19 @@ const CustomerDashboard = () => {
 function HomeTab({ balance, balanceLoading, bonusBalance, bonusLoading, membership, profile, businessName, welcomeMessage, brandColor, onNavigate }: any) {
   return (
     <div className="space-y-5">
-      {/* Welcome message */}
       {welcomeMessage && (
         <p className="text-sm text-muted-foreground text-center">{welcomeMessage}</p>
       )}
       {/* Points Card */}
-      <div className="rounded-xl border border-border bg-card p-6 text-center">
+      <div className="rounded-2xl bg-card border border-border p-6 text-center shadow-card">
         <p className="text-xs text-muted-foreground mb-1">Tus puntos en {businessName}</p>
-        <p className="text-4xl font-bold font-mono" style={{ color: brandColor || undefined }}>
-          {balanceLoading ? <Skeleton className="h-10 w-24 mx-auto" /> : (balance ?? 0)}
+        <p className="text-5xl font-extrabold font-mono text-primary">
+          {balanceLoading ? <Skeleton className="h-12 w-28 mx-auto" /> : (balance ?? 0)}
         </p>
         {membership?.status === 'active' && (
-          <div className="flex items-center justify-center gap-1 mt-2">
+          <div className="flex items-center justify-center gap-1.5 mt-3">
             <Crown size={14} className="text-primary" />
-            <span className="text-xs font-medium text-primary">
+            <span className="text-xs font-semibold text-primary">
               {membership.is_plus ? 'Miembro Plus' : 'Miembro activo'}
               {membership.points_multiplier > 1 && ` · ${membership.points_multiplier}x puntos`}
             </span>
@@ -251,21 +247,21 @@ function HomeTab({ balance, balanceLoading, bonusBalance, bonusLoading, membersh
         )}
       </div>
 
-      {/* Bonus Points Card */}
-      <div className="rounded-xl border border-border bg-card p-4">
+      {/* Bonus Points */}
+      <div className="rounded-xl bg-card border border-border p-4 shadow-card">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+          <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center">
             <Gift size={18} className="text-primary" />
           </div>
           <div className="flex-1">
             <p className="text-xs text-muted-foreground">Puntos de regalo</p>
-            <p className="text-xl font-bold font-mono text-foreground">
-              {bonusLoading ? <Skeleton className="h-6 w-12 inline-block" /> : (bonusBalance ?? 0)}
+            <p className="text-2xl font-bold font-mono text-foreground">
+              {bonusLoading ? <Skeleton className="h-7 w-14 inline-block" /> : (bonusBalance ?? 0)}
             </p>
           </div>
         </div>
         <p className="text-xs text-muted-foreground mt-2">
-          Puntos extra que has recibido por promociones, membresía o bonos especiales. Cuentan para canjear recompensas.
+          Puntos extra por promociones, membresía o bonos especiales.
         </p>
       </div>
 
@@ -273,17 +269,17 @@ function HomeTab({ balance, balanceLoading, bonusBalance, bonusLoading, membersh
       <div className="grid grid-cols-2 gap-3">
         {[
           { key: 'qr' as TabKey, icon: <QrCode size={20} />, label: 'Mi QR' },
-          { key: 'rewards' as TabKey, icon: <Gift size={20} />, label: 'Recompensas' },
+          { key: 'rewards' as TabKey, icon: <Gift size={20} />, label: 'Premios' },
           { key: 'promos' as TabKey, icon: <Ticket size={20} />, label: 'Promociones' },
           { key: 'referrals' as TabKey, icon: <Users size={20} />, label: 'Invitar amigos' },
         ].map((action) => (
           <button
             key={action.key}
             onClick={() => onNavigate(action.key)}
-            className="flex items-center gap-3 p-4 rounded-lg border border-border bg-card hover:bg-secondary transition-colors text-left"
+            className="flex items-center gap-3 p-4 rounded-xl border border-border bg-card hover:shadow-card-hover transition-all text-left shadow-card"
           >
             <div className="text-primary">{action.icon}</div>
-            <span className="text-sm font-medium text-foreground">{action.label}</span>
+            <span className="text-sm font-semibold text-foreground">{action.label}</span>
             <ChevronRight size={14} className="ml-auto text-muted-foreground" />
           </button>
         ))}
@@ -297,9 +293,9 @@ function QRTab({ qrToken, profileLoading }: { qrToken: string | null | undefined
   if (profileLoading) return <div className="flex justify-center py-12"><Skeleton className="h-48 w-48" /></div>;
 
   return (
-    <div className="flex flex-col items-center space-y-4">
+    <div className="flex flex-col items-center space-y-5">
       <p className="text-sm text-muted-foreground text-center">Muestra este código al staff para identificarte</p>
-      <div className="bg-card border border-border rounded-xl p-6">
+      <div className="bg-card border border-border rounded-2xl p-8 shadow-card">
         {qrToken ? (
           <QRCodeSVG value={qrToken} size={200} level="M" />
         ) : (
@@ -318,14 +314,14 @@ function QRTab({ qrToken, profileLoading }: { qrToken: string | null | undefined
 /* ═══════════════════════════════════════════ REWARDS TAB ═══════════════════════════════════════════ */
 function RewardsTab({ rewards, rewardsLoading, balance, redeeming, onRedeem }: any) {
   if (rewardsLoading) {
-    return <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-lg" />)}</div>;
+    return <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-24 w-full rounded-xl" />)}</div>;
   }
 
   if (!rewards || rewards.length === 0) {
     return (
-      <div className="text-center py-12">
-        <Gift size={40} className="mx-auto text-muted-foreground mb-3" />
-        <p className="text-sm text-muted-foreground">No hay recompensas disponibles en este momento</p>
+      <div className="text-center py-16">
+        <Gift size={48} className="mx-auto text-muted-foreground/30 mb-4" />
+        <p className="text-sm text-muted-foreground">No hay recompensas disponibles</p>
       </div>
     );
   }
@@ -336,17 +332,18 @@ function RewardsTab({ rewards, rewardsLoading, balance, redeeming, onRedeem }: a
       {rewards.map((reward: any) => {
         const canRedeem = balance !== undefined && balance >= reward.points_cost;
         return (
-          <div key={reward.id} className="border border-border rounded-lg p-4 bg-card">
+          <div key={reward.id} className="border border-border rounded-xl p-5 bg-card shadow-card">
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1">
-                <p className="font-medium text-foreground">{reward.name}</p>
+                <p className="font-semibold text-foreground">{reward.name}</p>
                 {reward.description && <p className="text-sm text-muted-foreground mt-1">{reward.description}</p>}
-                <p className="text-sm font-mono text-primary mt-2">{reward.points_cost} pts</p>
+                <p className="text-sm font-mono text-primary font-bold mt-2">{reward.points_cost} pts</p>
               </div>
               <Button
                 size="sm"
                 onClick={() => onRedeem(reward.id, reward.points_cost)}
                 disabled={redeeming === reward.id || !canRedeem}
+                className="font-semibold"
               >
                 {redeeming === reward.id ? '...' : 'Canjear'}
               </Button>
@@ -373,7 +370,6 @@ function PromosTab({ coupons, businessId, userId }: { coupons: any; businessId: 
     if (!code.trim()) return;
     setApplying(true);
     try {
-      // Find coupon by code
       const { data: coupon, error: findErr } = await supabase
         .from('coupons')
         .select('id, code, description, discount_type, discount_value')
@@ -384,7 +380,6 @@ function PromosTab({ coupons, businessId, userId }: { coupons: any; businessId: 
       if (findErr) throw findErr;
       if (!coupon) { toast.error('Código no válido o expirado'); return; }
 
-      // Check if already redeemed
       const { data: existing } = await supabase
         .from('coupon_redemptions')
         .select('id')
@@ -393,7 +388,6 @@ function PromosTab({ coupons, businessId, userId }: { coupons: any; businessId: 
         .maybeSingle();
       if (existing) { toast.error('Ya has utilizado este código'); return; }
 
-      // Redeem
       const { error: redeemErr } = await supabase.from('coupon_redemptions').insert({
         coupon_id: coupon.id,
         business_id: businessId,
@@ -409,34 +403,32 @@ function PromosTab({ coupons, businessId, userId }: { coupons: any; businessId: 
 
   return (
     <div className="space-y-5">
-      {/* Code input */}
-      <div className="rounded-lg border border-border bg-card p-4 space-y-3">
-        <p className="text-sm font-medium text-foreground">¿Tienes un código promocional?</p>
+      <div className="rounded-xl border border-border bg-card p-5 space-y-3 shadow-card">
+        <p className="text-sm font-semibold text-foreground">¿Tienes un código promocional?</p>
         <div className="flex gap-2">
           <input
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             placeholder="Ingresa el código"
-            className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground"
+            className="flex-1 rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           />
-          <Button size="sm" onClick={handleApplyCode} disabled={applying || !code.trim()}>
+          <Button size="sm" onClick={handleApplyCode} disabled={applying || !code.trim()} className="font-semibold">
             {applying ? '...' : 'Aplicar'}
           </Button>
         </div>
       </div>
 
-      {/* Active coupons */}
       {coupons && coupons.length > 0 ? (
         <div className="space-y-3">
-          <p className="text-xs text-muted-foreground">Promociones activas</p>
+          <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Promociones activas</p>
           {coupons.map((coupon: any) => (
-            <div key={coupon.id} className="border border-border rounded-lg p-4 bg-card">
+            <div key={coupon.id} className="border border-border rounded-xl p-5 bg-card shadow-card">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="font-medium text-foreground">{coupon.code}</p>
+                  <p className="font-bold text-foreground">{coupon.code}</p>
                   {coupon.description && <p className="text-sm text-muted-foreground mt-1">{coupon.description}</p>}
                 </div>
-                <span className="text-sm font-mono text-primary font-medium">
+                <span className="text-sm font-mono text-primary font-bold">
                   {coupon.discount_type === 'percentage' ? `${coupon.discount_value}%` : `$${coupon.discount_value}`}
                 </span>
               </div>
@@ -444,8 +436,8 @@ function PromosTab({ coupons, businessId, userId }: { coupons: any; businessId: 
           ))}
         </div>
       ) : (
-        <div className="text-center py-8">
-          <Ticket size={40} className="mx-auto text-muted-foreground mb-3" />
+        <div className="text-center py-12">
+          <Ticket size={48} className="mx-auto text-muted-foreground/30 mb-4" />
           <p className="text-sm text-muted-foreground">No hay promociones activas por ahora</p>
         </div>
       )}
@@ -473,15 +465,9 @@ function ReferralsTab({ referrals, businessId, userId }: { referrals: any; busin
   const handleApplyFriendCode = async () => {
     if (!friendCode.trim()) return;
     const trimmed = friendCode.trim().toUpperCase();
-
-    if (trimmed === myCode) {
-      toast.error('No puedes usar tu propio código');
-      return;
-    }
-
+    if (trimmed === myCode) { toast.error('No puedes usar tu propio código'); return; }
     setApplying(true);
     try {
-      // Find the referral with that code
       const { data: ref, error: findErr } = await supabase
         .from('referrals')
         .select('id, referrer_user_id, referred_user_id')
@@ -493,7 +479,6 @@ function ReferralsTab({ referrals, businessId, userId }: { referrals: any; busin
       if (ref.referred_user_id) { toast.error('Este código ya fue utilizado'); return; }
       if (ref.referrer_user_id === userId) { toast.error('No puedes usar tu propio código'); return; }
 
-      // Check if user already used a referral for this business
       const { data: existingRef } = await supabase
         .from('referrals')
         .select('id')
@@ -502,8 +487,6 @@ function ReferralsTab({ referrals, businessId, userId }: { referrals: any; busin
         .maybeSingle();
       if (existingRef) { toast.error('Ya utilizaste un código de invitación en este negocio'); return; }
 
-      // Note: referrals table doesn't allow UPDATE by users per RLS.
-      // We'll create a new referral record linking the referred user.
       const { error: insertErr } = await supabase.from('referrals').insert({
         business_id: businessId,
         referrer_user_id: ref.referrer_user_id,
@@ -512,7 +495,6 @@ function ReferralsTab({ referrals, businessId, userId }: { referrals: any; busin
         status: 'completed',
       });
       if (insertErr) throw insertErr;
-
       toast.success('¡Código de invitación aplicado!');
       setFriendCode('');
       queryClient.invalidateQueries({ queryKey: ['customer-referrals'] });
@@ -522,14 +504,15 @@ function ReferralsTab({ referrals, businessId, userId }: { referrals: any; busin
 
   return (
     <div className="space-y-5">
-      {/* My code */}
-      <div className="rounded-lg border border-border bg-card p-5 text-center space-y-3">
-        <Users size={32} className="mx-auto text-primary" />
-        <p className="text-sm font-medium text-foreground">Tu código de invitación</p>
+      <div className="rounded-2xl border border-border bg-card p-6 text-center space-y-4 shadow-card">
+        <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
+          <Users size={24} className="text-primary" />
+        </div>
+        <p className="text-sm font-semibold text-foreground">Tu código de invitación</p>
         {myCode ? (
           <>
-            <p className="text-2xl font-bold font-mono text-foreground tracking-widest">{myCode}</p>
-            <Button variant="outline" size="sm" onClick={handleCopy} className="gap-2">
+            <p className="text-3xl font-extrabold font-mono text-foreground tracking-widest">{myCode}</p>
+            <Button variant="outline" size="sm" onClick={handleCopy} className="gap-2 font-semibold">
               {copied ? <Check size={14} /> : <Copy size={14} />}
               {copied ? 'Copiado' : 'Copiar código'}
             </Button>
@@ -540,27 +523,25 @@ function ReferralsTab({ referrals, businessId, userId }: { referrals: any; busin
         <p className="text-xs text-muted-foreground">Comparte este código con tus amigos</p>
       </div>
 
-      {/* Enter friend code */}
-      <div className="rounded-lg border border-border bg-card p-4 space-y-3">
-        <p className="text-sm font-medium text-foreground">¿Tienes un código de un amigo?</p>
+      <div className="rounded-xl border border-border bg-card p-5 space-y-3 shadow-card">
+        <p className="text-sm font-semibold text-foreground">¿Tienes un código de un amigo?</p>
         <div className="flex gap-2">
           <input
             value={friendCode}
             onChange={(e) => setFriendCode(e.target.value.toUpperCase())}
             placeholder="Código de invitación"
-            className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground"
+            className="flex-1 rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           />
-          <Button size="sm" onClick={handleApplyFriendCode} disabled={applying || !friendCode.trim()}>
+          <Button size="sm" onClick={handleApplyFriendCode} disabled={applying || !friendCode.trim()} className="font-semibold">
             {applying ? '...' : 'Aplicar'}
           </Button>
         </div>
       </div>
 
-      {/* Referral stats */}
       {referrals && referrals.length > 0 && (
-        <div className="rounded-lg border border-border bg-card p-4">
-          <p className="text-xs text-muted-foreground mb-2">Tus invitaciones</p>
-          <p className="text-lg font-bold font-mono text-foreground">
+        <div className="rounded-xl border border-border bg-card p-5 shadow-card">
+          <p className="text-xs text-muted-foreground mb-2 font-semibold uppercase tracking-wider">Tus invitaciones</p>
+          <p className="text-2xl font-bold font-mono text-foreground">
             {referrals.filter((r: any) => r.status === 'completed').length} completadas
           </p>
         </div>
@@ -573,11 +554,10 @@ function ReferralsTab({ referrals, businessId, userId }: { referrals: any; busin
 function HistoryTab({ history, redemptions }: { history: any; redemptions: any }) {
   return (
     <div className="space-y-5">
-      {/* Points history */}
       <div>
-        <p className="text-xs text-muted-foreground mb-3">Movimientos de puntos</p>
+        <p className="text-xs text-muted-foreground mb-3 font-semibold uppercase tracking-wider">Movimientos de puntos</p>
         {history && history.length > 0 ? (
-          <div className="space-y-0 border border-border rounded-lg bg-card overflow-hidden">
+          <div className="border border-border rounded-xl bg-card overflow-hidden shadow-card">
             {history.map((entry: any, i: number) => {
               const typeLabel = entry.type === 'bonus' ? '🎁 Regalo'
                 : entry.type === 'earn' ? '➕ Ganados'
@@ -590,24 +570,22 @@ function HistoryTab({ history, redemptions }: { history: any; redemptions: any }
               return (
                 <div
                   key={entry.id}
-                  className={`flex items-center justify-between px-4 py-3 ${i < history.length - 1 ? 'border-b border-border' : ''}`}
+                  className={`flex items-center justify-between px-4 py-3.5 ${i < history.length - 1 ? 'border-b border-border' : ''}`}
                 >
                   <div>
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${
-                        entry.type === 'bonus' ? 'bg-primary/10 text-primary'
-                        : entry.type === 'redeem' ? 'bg-destructive/10 text-destructive'
-                        : 'bg-secondary text-muted-foreground'
-                      }`}>
-                        {typeLabel}
-                      </span>
-                    </div>
+                    <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-md ${
+                      entry.type === 'bonus' ? 'bg-primary/10 text-primary'
+                      : entry.type === 'redeem' ? 'bg-destructive/10 text-destructive'
+                      : 'bg-muted text-muted-foreground'
+                    }`}>
+                      {typeLabel}
+                    </span>
                     <p className="text-sm text-foreground mt-1">{entry.note || entry.type}</p>
                     <p className="text-xs font-mono text-muted-foreground">
                       {new Date(entry.created_at).toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' })}
                     </p>
                   </div>
-                  <p className={`text-sm font-mono font-semibold ${entry.points >= 0 ? 'text-foreground' : 'text-destructive'}`}>
+                  <p className={`text-sm font-mono font-bold ${entry.points >= 0 ? 'text-primary' : 'text-destructive'}`}>
                     {entry.points >= 0 ? '+' : ''}{entry.points}
                   </p>
                 </div>
@@ -615,33 +593,32 @@ function HistoryTab({ history, redemptions }: { history: any; redemptions: any }
             })}
           </div>
         ) : (
-          <div className="text-center py-8">
-            <History size={40} className="mx-auto text-muted-foreground mb-3" />
+          <div className="text-center py-12">
+            <History size={48} className="mx-auto text-muted-foreground/30 mb-4" />
             <p className="text-sm text-muted-foreground">Sin movimientos registrados</p>
           </div>
         )}
       </div>
 
-      {/* Redemptions */}
       {redemptions && redemptions.length > 0 && (
         <div>
-          <p className="text-xs text-muted-foreground mb-3">Canjes realizados</p>
-          <div className="space-y-0 border border-border rounded-lg bg-card overflow-hidden">
+          <p className="text-xs text-muted-foreground mb-3 font-semibold uppercase tracking-wider">Canjes realizados</p>
+          <div className="border border-border rounded-xl bg-card overflow-hidden shadow-card">
             {redemptions.map((r: any, i: number) => (
               <div
                 key={r.id}
-                className={`flex items-center justify-between px-4 py-3 ${i < redemptions.length - 1 ? 'border-b border-border' : ''}`}
+                className={`flex items-center justify-between px-4 py-3.5 ${i < redemptions.length - 1 ? 'border-b border-border' : ''}`}
               >
                 <div>
-                  <p className="text-sm text-foreground">{(r.rewards as any)?.name || 'Recompensa'}</p>
+                  <p className="text-sm font-medium text-foreground">{(r.rewards as any)?.name || 'Recompensa'}</p>
                   <p className="text-xs font-mono text-muted-foreground">
                     {new Date(r.created_at).toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' })}
                   </p>
                 </div>
-                <span className={`text-xs font-mono px-2 py-1 rounded-md ${
-                  r.status === 'approved' ? 'bg-secondary text-foreground' :
-                  r.status === 'pending' ? 'bg-secondary text-muted-foreground' :
-                  'bg-secondary text-destructive'
+                <span className={`text-xs font-mono font-semibold px-2.5 py-1 rounded-lg ${
+                  r.status === 'approved' ? 'bg-success/10 text-success' :
+                  r.status === 'pending' ? 'bg-warning/10 text-warning' :
+                  'bg-destructive/10 text-destructive'
                 }`}>
                   {r.status === 'approved' ? 'Aprobado' : r.status === 'pending' ? 'Pendiente' : 'Rechazado'}
                 </span>
@@ -658,8 +635,8 @@ function HistoryTab({ history, redemptions }: { history: any; redemptions: any }
 function MembershipTab({ membership }: { membership: any }) {
   if (!membership) {
     return (
-      <div className="text-center py-12">
-        <CreditCard size={40} className="mx-auto text-muted-foreground mb-3" />
+      <div className="text-center py-16">
+        <CreditCard size={48} className="mx-auto text-muted-foreground/30 mb-4" />
         <p className="text-sm text-muted-foreground">No tienes una membresía activa en este negocio</p>
         <p className="text-xs text-muted-foreground mt-2">Consulta con el negocio para conocer los planes disponibles</p>
       </div>
@@ -668,37 +645,39 @@ function MembershipTab({ membership }: { membership: any }) {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-border bg-card p-6 text-center space-y-3">
-        <Crown size={32} className="mx-auto text-primary" />
+      <div className="rounded-2xl border border-border bg-card p-6 text-center space-y-4 shadow-card">
+        <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
+          <Crown size={24} className="text-primary" />
+        </div>
         <div>
-          <p className="text-lg font-semibold text-foreground">
+          <p className="text-lg font-bold text-foreground">
             {membership.plan_name || (membership.is_plus ? 'Membresía Plus' : 'Membresía')}
           </p>
-          <span className={`text-xs font-mono px-2 py-1 rounded-md ${
-            membership.status === 'active' ? 'bg-secondary text-foreground' : 'bg-secondary text-muted-foreground'
+          <span className={`inline-block text-xs font-mono font-semibold px-3 py-1 rounded-lg mt-2 ${
+            membership.status === 'active' ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'
           }`}>
             {membership.status === 'active' ? 'Activa' : membership.status}
           </span>
         </div>
       </div>
 
-      <div className="rounded-lg border border-border bg-card p-4 space-y-3">
-        <p className="text-xs text-muted-foreground">Beneficios de tu membresía</p>
-        <div className="space-y-2">
+      <div className="rounded-xl border border-border bg-card p-5 space-y-3 shadow-card">
+        <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Beneficios</p>
+        <div className="space-y-2.5">
           {membership.points_multiplier > 1 && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               <Star size={14} className="text-primary" />
-              <span className="text-sm text-foreground">Multiplicador de puntos: {membership.points_multiplier}x</span>
+              <span className="text-sm text-foreground">Multiplicador de puntos: <strong>{membership.points_multiplier}x</strong></span>
             </div>
           )}
           {membership.bonus_points > 0 && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               <Gift size={14} className="text-primary" />
-              <span className="text-sm text-foreground">Puntos bonus: +{membership.bonus_points}</span>
+              <span className="text-sm text-foreground">Puntos bonus: <strong>+{membership.bonus_points}</strong></span>
             </div>
           )}
           {membership.started_at && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               <History size={14} className="text-muted-foreground" />
               <span className="text-sm text-muted-foreground">
                 Desde: {new Date(membership.started_at).toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' })}
@@ -706,7 +685,7 @@ function MembershipTab({ membership }: { membership: any }) {
             </div>
           )}
           {membership.ends_at && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               <History size={14} className="text-muted-foreground" />
               <span className="text-sm text-muted-foreground">
                 Vence: {new Date(membership.ends_at).toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' })}
@@ -762,35 +741,35 @@ function ProfileTab({ businessSlug }: { businessSlug: string }) {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="flex items-center gap-4">
-        <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center overflow-hidden">
+        <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center overflow-hidden">
           {profile?.avatar_url ? (
             <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
           ) : (
             <User size={24} className="text-muted-foreground" />
           )}
         </div>
-        <label className="text-sm text-primary hover:underline cursor-pointer">
+        <label className="text-sm text-primary font-semibold hover:underline cursor-pointer">
           Cambiar foto
           <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
         </label>
       </div>
       <div className="space-y-2">
-        <label className="text-sm text-muted-foreground">Nombre</label>
+        <label className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Nombre</label>
         <input value={fullName} onChange={(e) => setFullName(e.target.value)}
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground" />
+          className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
       </div>
       <div className="space-y-2">
-        <label className="text-sm text-muted-foreground">Teléfono</label>
+        <label className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Teléfono</label>
         <input value={phone} onChange={(e) => setPhone(e.target.value)}
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground" />
+          className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
       </div>
       <div className="space-y-2">
-        <label className="text-sm text-muted-foreground">Email</label>
+        <label className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Email</label>
         <p className="text-sm font-mono text-foreground">{user?.email}</p>
       </div>
-      <Button onClick={handleSave} disabled={saving} className="w-full">
+      <Button onClick={handleSave} disabled={saving} className="w-full h-11 font-semibold">
         {saving ? 'Guardando...' : 'Guardar cambios'}
       </Button>
     </div>
