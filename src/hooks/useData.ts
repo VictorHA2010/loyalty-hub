@@ -7,12 +7,42 @@ export function useUserBusinesses() {
   return useQuery({
     queryKey: ['user-businesses', user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Fetch roles (business_admin, staff, platform_admin)
+      const { data: rolesData, error: rolesError } = await supabase
         .from('user_roles')
         .select('business_id, role, businesses(id, name, slug, logo_url)')
         .eq('user_id', user!.id);
-      if (error) throw error;
-      return data;
+      if (rolesError) throw rolesError;
+
+      // Fetch customer relationships
+      const { data: customerData, error: customerError } = await supabase
+        .from('customer_businesses')
+        .select('business_id, businesses(id, name, slug, logo_url)')
+        .eq('user_id', user!.id);
+      if (customerError) throw customerError;
+
+      // Combine: roles first, then customer entries not already covered
+      const seen = new Set<string>();
+      const combined: Array<{ business_id: string | null; role: string; businesses: any }> = [];
+
+      for (const r of rolesData || []) {
+        if (r.business_id) seen.add(r.business_id);
+        combined.push(r);
+      }
+
+      for (const c of customerData || []) {
+        if (!seen.has(c.business_id)) {
+          seen.add(c.business_id);
+          combined.push({
+            business_id: c.business_id,
+            role: 'customer',
+            businesses: c.businesses,
+          });
+        }
+      }
+
+      // Filter out platform_admin entries with null business_id
+      return combined.filter(r => r.business_id !== null);
     },
     enabled: !!user,
   });
