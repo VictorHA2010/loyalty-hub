@@ -222,9 +222,14 @@ function ScanTab() {
         .from('profiles')
         .select('*')
         .eq('qr_token', token.trim())
-        .single();
-      if (error || !profile) {
-        toast.error('Cliente no encontrado');
+        .maybeSingle();
+      if (error) {
+        console.error('Error buscando perfil:', error);
+        toast.error('Error al buscar cliente');
+        return;
+      }
+      if (!profile) {
+        toast.error('Cliente no encontrado. Verifica que el QR sea válido.');
         return;
       }
       const { data: points } = await supabase
