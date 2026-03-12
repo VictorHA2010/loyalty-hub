@@ -12,6 +12,10 @@ interface Business {
   secondary_color: string | null;
   accent_color: string | null;
   banner_image: string | null;
+  banner_title: string | null;
+  banner_description: string | null;
+  banner_link: string | null;
+  banner_active: boolean;
   welcome_message: string | null;
   short_description: string | null;
   business_type: string | null;
