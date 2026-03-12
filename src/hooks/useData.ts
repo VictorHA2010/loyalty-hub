@@ -267,7 +267,7 @@ export function useBusinessCustomers(businessId: string | undefined) {
       const [customersRes, rolesRes] = await Promise.all([
         supabase
           .from('customer_businesses')
-          .select('*, profiles(id, full_name, email, phone, avatar_url)')
+          .select('*, profiles!customer_businesses_user_id_fkey(id, full_name, email, phone, avatar_url)')
           .eq('business_id', businessId!)
           .order('joined_at', { ascending: false }),
         supabase
