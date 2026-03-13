@@ -39,10 +39,10 @@ const SuperAdminDashboard = () => {
   }, [user, authLoading, globalRole, navigate]);
 
   useEffect(() => {
-    if (user?.email === SUPER_ADMIN_EMAIL) {
+    if (globalRole === "platform_admin") {
       fetchBusinesses();
     }
-  }, [user]);
+  }, [globalRole]);
 
   const fetchBusinesses = async () => {
     setLoading(true);
