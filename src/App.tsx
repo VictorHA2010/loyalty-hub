@@ -23,6 +23,8 @@ import AdminLoyaltySettings from "./pages/AdminLoyaltySettings";
 import AdminSettings from "./pages/AdminSettings";
 import PlatformDashboard from "./pages/PlatformDashboard";
 import PlatformBusinessEdit from "./pages/PlatformBusinessEdit";
+import SubscriptionPlans from "./pages/SubscriptionPlans";
+import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
