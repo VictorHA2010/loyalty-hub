@@ -14,6 +14,7 @@ import {
   Crown,
   Sliders,
   UserCheck,
+  CreditCard,
   Copy,
   Shield,
   Menu,
