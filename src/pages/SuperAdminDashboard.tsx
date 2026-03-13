@@ -23,7 +23,7 @@ interface BusinessRow {
 }
 
 const SuperAdminDashboard = () => {
-  const { user, loading: authLoading, signOut } = useAuth();
+  const { user, loading: authLoading, signOut, globalRole } = useAuth();
   const navigate = useNavigate();
   const [businesses, setBusinesses] = useState<BusinessRow[]>([]);
   const [loading, setLoading] = useState(true);
