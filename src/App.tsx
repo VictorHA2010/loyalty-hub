@@ -23,6 +23,8 @@ import AdminLoyaltySettings from "./pages/AdminLoyaltySettings";
 import AdminSettings from "./pages/AdminSettings";
 import PlatformDashboard from "./pages/PlatformDashboard";
 import PlatformBusinessEdit from "./pages/PlatformBusinessEdit";
+import SubscriptionPlans from "./pages/SubscriptionPlans";
+import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -94,9 +96,13 @@ const App = () => (
             <Route path="/admin/:slug/redemptions" element={<BusinessProvider><BusinessRoleGuard allowed={['business_admin']}><AdminRedemptions /></BusinessRoleGuard></BusinessProvider>} />
             <Route path="/admin/:slug/loyalty" element={<BusinessProvider><BusinessRoleGuard allowed={['business_admin']}><AdminLoyaltySettings /></BusinessRoleGuard></BusinessProvider>} />
             <Route path="/admin/:slug/settings" element={<BusinessProvider><BusinessRoleGuard allowed={['business_admin']}><AdminSettings /></BusinessRoleGuard></BusinessProvider>} />
+            <Route path="/admin/:slug/plans" element={<BusinessProvider><BusinessRoleGuard allowed={['business_admin']}><SubscriptionPlans /></BusinessRoleGuard></BusinessProvider>} />
 
             {/* Staff routes by slug — guarded by role */}
             <Route path="/staff/:slug" element={<BusinessProvider><BusinessRoleGuard allowed={['staff', 'business_admin']}><StaffDashboard /></BusinessRoleGuard></BusinessProvider>} />
+
+            {/* Super Admin */}
+            <Route path="/super-admin" element={<SuperAdminDashboard />} />
 
             {/* Legacy redirects */}
             <Route path="/admin" element={<Navigate to="/select-business" replace />} />

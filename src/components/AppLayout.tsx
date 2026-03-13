@@ -14,6 +14,7 @@ import {
   Crown,
   Sliders,
   UserCheck,
+  CreditCard,
   Copy,
   Shield,
   Menu,
@@ -39,6 +40,7 @@ function getAdminNav(slug: string): NavItem[] {
     { label: 'Canjes', to: `/admin/${slug}/redemptions`, icon: <History size={18} /> },
     { label: 'Reglas de puntos', to: `/admin/${slug}/loyalty`, icon: <Sliders size={18} /> },
     { label: 'Configuración', to: `/admin/${slug}/settings`, icon: <Settings size={18} /> },
+    { label: 'Planes', to: `/admin/${slug}/plans`, icon: <CreditCard size={18} /> },
   ];
 }
 
