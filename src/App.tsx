@@ -101,6 +101,9 @@ const App = () => (
             {/* Staff routes by slug — guarded by role */}
             <Route path="/staff/:slug" element={<BusinessProvider><BusinessRoleGuard allowed={['staff', 'business_admin']}><StaffDashboard /></BusinessRoleGuard></BusinessProvider>} />
 
+            {/* Super Admin */}
+            <Route path="/super-admin" element={<SuperAdminDashboard />} />
+
             {/* Legacy redirects */}
             <Route path="/admin" element={<Navigate to="/select-business" replace />} />
             <Route path="/staff" element={<Navigate to="/select-business" replace />} />
