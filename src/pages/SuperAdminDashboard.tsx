@@ -11,8 +11,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Shield, LogOut, Loader2, Building2, CheckCircle, XCircle } from "lucide-react";
 import { toast } from "sonner";
 
-const SUPER_ADMIN_EMAIL = "admin@loyaltyhub.com"; // Change this to your email
-
 interface BusinessRow {
   id: string;
   name: string;
@@ -25,7 +23,7 @@ interface BusinessRow {
 }
 
 const SuperAdminDashboard = () => {
-  const { user, loading: authLoading, signOut } = useAuth();
+  const { user, loading: authLoading, signOut, globalRole } = useAuth();
   const navigate = useNavigate();
   const [businesses, setBusinesses] = useState<BusinessRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,16 +33,16 @@ const SuperAdminDashboard = () => {
   const [activating, setActivating] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && (!user || user.email !== SUPER_ADMIN_EMAIL)) {
+    if (!authLoading && (!user || globalRole !== "platform_admin")) {
       navigate("/login");
     }
-  }, [user, authLoading, navigate]);
+  }, [user, authLoading, globalRole, navigate]);
 
   useEffect(() => {
-    if (user?.email === SUPER_ADMIN_EMAIL) {
+    if (globalRole === "platform_admin") {
       fetchBusinesses();
     }
-  }, [user]);
+  }, [globalRole]);
 
   const fetchBusinesses = async () => {
     setLoading(true);
@@ -114,7 +112,7 @@ const SuperAdminDashboard = () => {
     );
   }
 
-  if (!user || user.email !== SUPER_ADMIN_EMAIL) return null;
+  if (!user || globalRole !== "platform_admin") return null;
 
   const activeCount = businesses.filter((b) => b.is_active).length;
   const pendingCount = businesses.filter((b) => !b.is_active).length;
