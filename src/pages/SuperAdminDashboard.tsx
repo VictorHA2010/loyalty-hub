@@ -33,10 +33,10 @@ const SuperAdminDashboard = () => {
   const [activating, setActivating] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && (!user || user.email !== SUPER_ADMIN_EMAIL)) {
+    if (!authLoading && (!user || globalRole !== "platform_admin")) {
       navigate("/login");
     }
-  }, [user, authLoading, navigate]);
+  }, [user, authLoading, globalRole, navigate]);
 
   useEffect(() => {
     if (user?.email === SUPER_ADMIN_EMAIL) {
