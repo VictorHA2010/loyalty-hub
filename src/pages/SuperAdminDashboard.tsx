@@ -112,7 +112,7 @@ const SuperAdminDashboard = () => {
     );
   }
 
-  if (!user || user.email !== SUPER_ADMIN_EMAIL) return null;
+  if (!user || globalRole !== "platform_admin") return null;
 
   const activeCount = businesses.filter((b) => b.is_active).length;
   const pendingCount = businesses.filter((b) => !b.is_active).length;
