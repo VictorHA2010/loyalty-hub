@@ -70,14 +70,19 @@ export type Database = {
           banner_title: string | null
           business_type: string | null
           created_at: string
+          current_period_end: string | null
           custom_domain: string | null
           id: string
+          is_active: boolean | null
           logo_url: string | null
           name: string
           primary_color: string | null
           secondary_color: string | null
           short_description: string | null
           slug: string
+          stripe_customer_id: string | null
+          stripe_price_id: string | null
+          subscription_status: string | null
           welcome_message: string | null
         }
         Insert: {
@@ -90,14 +95,19 @@ export type Database = {
           banner_title?: string | null
           business_type?: string | null
           created_at?: string
+          current_period_end?: string | null
           custom_domain?: string | null
           id?: string
+          is_active?: boolean | null
           logo_url?: string | null
           name: string
           primary_color?: string | null
           secondary_color?: string | null
           short_description?: string | null
           slug: string
+          stripe_customer_id?: string | null
+          stripe_price_id?: string | null
+          subscription_status?: string | null
           welcome_message?: string | null
         }
         Update: {
@@ -110,14 +120,19 @@ export type Database = {
           banner_title?: string | null
           business_type?: string | null
           created_at?: string
+          current_period_end?: string | null
           custom_domain?: string | null
           id?: string
+          is_active?: boolean | null
           logo_url?: string | null
           name?: string
           primary_color?: string | null
           secondary_color?: string | null
           short_description?: string | null
           slug?: string
+          stripe_customer_id?: string | null
+          stripe_price_id?: string | null
+          subscription_status?: string | null
           welcome_message?: string | null
         }
         Relationships: []
