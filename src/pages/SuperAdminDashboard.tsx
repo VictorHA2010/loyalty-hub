@@ -11,8 +11,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Shield, LogOut, Loader2, Building2, CheckCircle, XCircle } from "lucide-react";
 import { toast } from "sonner";
 
-const SUPER_ADMIN_EMAIL = "admin@loyaltyhub.com"; // Change this to your email
-
 interface BusinessRow {
   id: string;
   name: string;
