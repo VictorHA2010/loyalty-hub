@@ -177,7 +177,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [business]);
 
   return (
-    <BusinessCtx.Provider value={{ business, loading, error }}>
+    <BusinessCtx.Provider value={{ business, loading, error, refetchBusiness }}>
       {children}
     </BusinessCtx.Provider>
   );
