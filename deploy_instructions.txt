@@ -1,0 +1,33 @@
+# ============================================
+# INSTRUCCIONES DE DEPLOY - Supabase Externo
+# Proyecto: zkybazhmgybrszkyhapy
+# ============================================
+
+# 1. VINCULAR PROYECTO SUPABASE
+supabase link --project-ref zkybazhmgybrszkyhapy
+
+# 2. CONFIGURAR SECRETS (reemplaza los valores entre comillas)
+supabase secrets set STRIPE_SECRET_KEY="sk_live_TU_CLAVE_AQUI"
+supabase secrets set STRIPE_WEBHOOK_SECRET="whsec_TU_WEBHOOK_SECRET_AQUI"
+
+# 3. DEPLOY DE EDGE FUNCTIONS
+supabase functions deploy create-checkout-session --no-verify-jwt
+supabase functions deploy stripe-webhook --no-verify-jwt
+
+# 4. CONFIGURAR WEBHOOK EN STRIPE DASHBOARD
+# URL: https://zkybazhmgybrszkyhapy.supabase.co/functions/v1/stripe-webhook
+# Eventos a escuchar: checkout.session.completed
+
+# 5. VARIABLES DE ENTORNO EN VERCEL
+# VITE_SUPABASE_URL=https://zkybazhmgybrszkyhapy.supabase.co
+# VITE_SUPABASE_PUBLISHABLE_KEY=TU_ANON_KEY_DEL_PROYECTO_EXTERNO
+# VITE_SUPABASE_PROJECT_ID=zkybazhmgybrszkyhapy
+
+# 6. VERIFICAR DEPLOY
+supabase functions list
+supabase secrets list
+
+# 7. PROBAR WEBHOOK (opcional)
+# Instala Stripe CLI: https://stripe.com/docs/stripe-cli
+stripe listen --forward-to https://zkybazhmgybrszkyhapy.supabase.co/functions/v1/stripe-webhook
+stripe trigger checkout.session.completed
