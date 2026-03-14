@@ -53,7 +53,6 @@ serve(async (req) => {
     }
 
     // Get user email
-    const { data: { user } } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
     const email = user?.email;
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
