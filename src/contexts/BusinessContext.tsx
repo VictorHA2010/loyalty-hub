@@ -35,6 +35,7 @@ const BusinessCtx = createContext<BusinessContextType>({
   business: null,
   loading: true,
   error: null,
+  refetchBusiness: () => {},
 });
 
 export const useBusiness = () => useContext(BusinessCtx);
