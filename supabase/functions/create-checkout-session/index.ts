@@ -53,7 +53,6 @@ serve(async (req) => {
     }
 
     // Get user email
-    const { data: { user } } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
     const email = user?.email;
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
@@ -86,7 +85,7 @@ serve(async (req) => {
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       line_items: [{ price: priceId, quantity: 1 }],
-      mode: "payment",
+      mode: "subscription",
       success_url: successUrl,
       cancel_url: cancelUrl,
       metadata: { business_id: businessId, price_id: priceId },
