@@ -28,6 +28,7 @@ interface BusinessContextType {
   business: Business | null;
   loading: boolean;
   error: string | null;
+  refetchBusiness: () => void;
 }
 
 const BusinessCtx = createContext<BusinessContextType>({
