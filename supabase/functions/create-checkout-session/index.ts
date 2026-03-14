@@ -85,7 +85,7 @@ serve(async (req) => {
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       line_items: [{ price: priceId, quantity: 1 }],
-      mode: "payment",
+      mode: "subscription",
       success_url: successUrl,
       cancel_url: cancelUrl,
       metadata: { business_id: businessId, price_id: priceId },
