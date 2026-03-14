@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -43,8 +44,30 @@ const PLANS = [
 
 const SubscriptionPlans = () => {
   const { session } = useAuth();
-  const { business } = useBusiness();
+  const { business, refetchBusiness } = useBusiness();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Detect payment success and refetch business data
+  useEffect(() => {
+    if (searchParams.get("payment") === "success") {
+      toast.success("¡Pago completado! Activando tu suscripción...");
+      // Remove query param
+      setSearchParams({}, { replace: true });
+      // Poll for webhook update (may take a few seconds)
+      let attempts = 0;
+      const interval = setInterval(async () => {
+        attempts++;
+        refetchBusiness();
+        if (attempts >= 10) clearInterval(interval);
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+    if (searchParams.get("payment") === "cancelled") {
+      toast.error("Pago cancelado");
+      setSearchParams({}, { replace: true });
+    }
+  }, []);
 
   const handleSubscribe = async (priceId: string) => {
     if (!business || !session) return;
@@ -55,7 +78,7 @@ const SubscriptionPlans = () => {
         body: {
           priceId,
           businessId: business.id,
-          successUrl: `${window.location.origin}/admin/${business.slug}/settings?payment=success`,
+          successUrl: `${window.location.origin}/admin/${business.slug}/plans?payment=success`,
           cancelUrl: `${window.location.origin}/admin/${business.slug}/plans?payment=cancelled`,
         },
       });
@@ -74,7 +97,7 @@ const SubscriptionPlans = () => {
     }
   };
 
-  const isActive = (business as any)?.is_active;
+  const isActive = business?.is_active;
 
   return (
     <AppLayout role="admin">
@@ -87,6 +110,11 @@ const SubscriptionPlans = () => {
           {isActive && (
             <Badge className="mt-3 bg-primary/10 text-primary border-primary/20">
               <Check size={14} className="mr-1" /> Tu suscripción está activa
+            </Badge>
+          )}
+          {!isActive && (
+            <Badge variant="destructive" className="mt-3">
+              Tu suscripción no está activa — selecciona un plan para continuar
             </Badge>
           )}
         </div>
@@ -132,13 +160,15 @@ const SubscriptionPlans = () => {
                   className="w-full"
                   variant={plan.popular ? "default" : "outline"}
                   onClick={() => handleSubscribe(plan.priceId)}
-                  disabled={loadingPlan !== null}
+                  disabled={loadingPlan !== null || isActive === true}
                 >
                   {loadingPlan === plan.priceId ? (
                     <>
                       <Loader2 size={16} className="animate-spin mr-2" />
                       Procesando...
                     </>
+                  ) : isActive ? (
+                    "Suscripción activa"
                   ) : (
                     "Suscribirse"
                   )}
