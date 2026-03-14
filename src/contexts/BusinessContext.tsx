@@ -19,18 +19,23 @@ interface Business {
   welcome_message: string | null;
   short_description: string | null;
   business_type: string | null;
+  is_active: boolean | null;
+  subscription_status: string | null;
+  current_period_end: string | null;
 }
 
 interface BusinessContextType {
   business: Business | null;
   loading: boolean;
   error: string | null;
+  refetchBusiness: () => void;
 }
 
 const BusinessCtx = createContext<BusinessContextType>({
   business: null,
   loading: true,
   error: null,
+  refetchBusiness: () => {},
 });
 
 export const useBusiness = () => useContext(BusinessCtx);
@@ -52,10 +57,16 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setLoading(true);
     setError(null);
 
+    fetchBusiness(slug, cancelled);
+
+    return () => { cancelled = true; };
+  }, [slug]);
+
+  const fetchBusiness = (businessSlug: string, cancelled = false) => {
     supabase
       .from('businesses')
-      .select('id, name, slug, logo_url, active, primary_color, secondary_color, accent_color, banner_image, banner_title, banner_description, banner_link, banner_active, welcome_message, short_description, business_type')
-      .eq('slug', slug)
+      .select('id, name, slug, logo_url, active, primary_color, secondary_color, accent_color, banner_image, banner_title, banner_description, banner_link, banner_active, welcome_message, short_description, business_type, is_active, subscription_status, current_period_end')
+      .eq('slug', businessSlug)
       .single()
       .then(({ data, error: err }) => {
         if (cancelled) return;
@@ -67,9 +78,14 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         }
         setLoading(false);
       });
+  };
 
-    return () => { cancelled = true; };
-  }, [slug]);
+  const refetchBusiness = () => {
+    if (slug) {
+      setLoading(true);
+      fetchBusiness(slug);
+    }
+  };
 
   // Dynamic favicon based on business logo
   useEffect(() => {
@@ -161,7 +177,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [business]);
 
   return (
-    <BusinessCtx.Provider value={{ business, loading, error }}>
+    <BusinessCtx.Provider value={{ business, loading, error, refetchBusiness }}>
       {children}
     </BusinessCtx.Provider>
   );

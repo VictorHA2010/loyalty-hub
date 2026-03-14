@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBusiness } from '@/contexts/BusinessContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,15 +10,11 @@ interface BusinessRoleGuardProps {
   allowed: string[];
 }
 
-/**
- * Verifies the current user has one of the allowed roles
- * for the current business before rendering children.
- * Platform admins always pass.
- */
 const BusinessRoleGuard = ({ children, allowed }: BusinessRoleGuardProps) => {
   const { user, loading: authLoading, globalRole } = useAuth();
   const { business, loading: bizLoading } = useBusiness();
   const navigate = useNavigate();
+  const location = useLocation();
   const [checking, setChecking] = useState(true);
   const [authorized, setAuthorized] = useState(false);
 
@@ -54,11 +50,18 @@ const BusinessRoleGuard = ({ children, allowed }: BusinessRoleGuardProps) => {
         if (!hasAccess) {
           navigate('/select-business', { replace: true });
         } else {
-          setAuthorized(true);
+          // Subscription guard: if business is not active and user is business_admin,
+          // redirect to plans page (unless already on plans page)
+          const isOnPlansPage = location.pathname.endsWith('/plans');
+          if (!isOnPlansPage && !business.is_active && roles.includes('business_admin')) {
+            navigate(`/admin/${business.slug}/plans`, { replace: true });
+          } else {
+            setAuthorized(true);
+          }
         }
         setChecking(false);
       });
-  }, [user, business, authLoading, bizLoading, globalRole, allowed, navigate]);
+  }, [user, business, authLoading, bizLoading, globalRole, allowed, navigate, location.pathname]);
 
   if (authLoading || bizLoading || checking) {
     return (
