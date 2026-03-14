@@ -19,6 +19,9 @@ interface Business {
   welcome_message: string | null;
   short_description: string | null;
   business_type: string | null;
+  is_active: boolean | null;
+  subscription_status: string | null;
+  current_period_end: string | null;
 }
 
 interface BusinessContextType {
