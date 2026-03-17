@@ -1,14 +1,24 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserBusinesses } from '@/hooks/useData';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LogOut, Shield, Building2 } from 'lucide-react';
 
+const PAYMENT_FLAG = 'loyaltyhub_payment_completed';
+
 const SelectBusiness = () => {
   const { user, globalRole, setBusinessContext, signOut } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { data: businesses, isLoading, error } = useUserBusinesses();
+
+  // Capture payment=success from Stripe redirect
+  useEffect(() => {
+    if (searchParams.get('payment') === 'success') {
+      localStorage.setItem(PAYMENT_FLAG, 'true');
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!user) {
@@ -23,6 +33,7 @@ const SelectBusiness = () => {
 
   useEffect(() => {
     if (!businesses || globalRole === 'platform_admin') return;
+
     if (businesses.length === 1) {
       const b = businesses[0];
       const biz = b.businesses as any;
@@ -34,9 +45,20 @@ const SelectBusiness = () => {
       const route = getRouteForRole(b.role, biz?.slug);
       navigate(route);
     }
+
+    // No businesses: decide where to send user
+    if (businesses.length === 0) {
+      const hasPaid = localStorage.getItem(PAYMENT_FLAG) === 'true';
+      if (hasPaid) {
+        navigate('/activation');
+      } else {
+        navigate('/plans');
+      }
+    }
   }, [businesses, globalRole, navigate, setBusinessContext]);
 
   const handleSignOut = async () => {
+    localStorage.removeItem(PAYMENT_FLAG);
     await signOut();
     navigate('/login');
   };
@@ -65,21 +87,12 @@ const SelectBusiness = () => {
     );
   }
 
+  // If no businesses, the useEffect above handles redirection.
+  // This block is a fallback while redirect triggers.
   if (!businesses || businesses.length === 0) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="text-center space-y-4">
-          <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
-            <Shield size={24} className="text-primary" />
-          </div>
-          <h1 className="text-xl font-bold text-foreground">Bienvenido</h1>
-          <p className="text-sm text-muted-foreground">
-            Aún no perteneces a ningún negocio. Un administrador debe agregarte a uno.
-          </p>
-          <button onClick={handleSignOut} className="flex items-center gap-2 mx-auto text-sm text-muted-foreground hover:text-foreground font-medium">
-            <LogOut size={16} /> Cerrar sesión
-          </button>
-        </div>
+        <p className="text-sm text-muted-foreground">Redirigiendo...</p>
       </div>
     );
   }

@@ -24,6 +24,8 @@ import AdminSettings from "./pages/AdminSettings";
 import PlatformDashboard from "./pages/PlatformDashboard";
 import PlatformBusinessEdit from "./pages/PlatformBusinessEdit";
 import SubscriptionPlans from "./pages/SubscriptionPlans";
+import PlansOverview from "./pages/PlansOverview";
+import ActivationPending from "./pages/ActivationPending";
 import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import NotFound from "./pages/NotFound";
 
@@ -76,6 +78,10 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/select-business" element={<ProtectedRoute><SelectBusiness /></ProtectedRoute>} />
             <Route path="/select-org" element={<Navigate to="/select-business" replace />} />
+
+            {/* Standalone plans & activation for users without a business */}
+            <Route path="/plans" element={<ProtectedRoute><PlansOverview /></ProtectedRoute>} />
+            <Route path="/activation" element={<ProtectedRoute><ActivationPending /></ProtectedRoute>} />
 
             {/* Platform Admin */}
             <Route path="/platform" element={<RoleRoute allowed={['platform_admin']}><PlatformDashboard /></RoleRoute>} />
