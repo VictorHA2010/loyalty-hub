@@ -49,11 +49,7 @@ serve(async (req) => {
     const session = event.data.object as Stripe.Checkout.Session;
     const businessId = session.metadata?.business_id;
     const priceId = session.metadata?.price_id;
-
-    if (!businessId) {
-      console.error("No business_id in session metadata");
-      return new Response(JSON.stringify({ error: "No business_id" }), { status: 400 });
-    }
+    const userId = session.metadata?.user_id;
 
     // Calculate period end based on price
     let daysToAdd = 30; // default monthly
@@ -66,22 +62,48 @@ serve(async (req) => {
     const periodEnd = new Date();
     periodEnd.setDate(periodEnd.getDate() + daysToAdd);
 
-    const { error } = await supabaseAdmin
-      .from("businesses")
-      .update({
-        is_active: true,
-        subscription_status: "active",
-        stripe_price_id: priceId,
-        current_period_end: periodEnd.toISOString(),
-      })
-      .eq("id", businessId);
+    if (businessId) {
+      // ── Existing flow: activate the business ──
+      const { error } = await supabaseAdmin
+        .from("businesses")
+        .update({
+          is_active: true,
+          subscription_status: "active",
+          stripe_price_id: priceId,
+          current_period_end: periodEnd.toISOString(),
+        })
+        .eq("id", businessId);
 
-    if (error) {
-      console.error("Error updating business:", error);
-      return new Response(JSON.stringify({ error: "DB update failed" }), { status: 500 });
+      if (error) {
+        console.error("Error updating business:", error);
+        return new Response(JSON.stringify({ error: "DB update failed" }), { status: 500 });
+      }
+
+      console.log(`Business ${businessId} activated until ${periodEnd.toISOString()}`);
+    } else if (userId) {
+      // ── New flow: user paid without a business ──
+      // Store payment info on user's profile metadata for platform_admin to process
+      console.log(`User ${userId} completed payment (price: ${priceId}) without a business. Awaiting business assignment.`);
+
+      // We store a reference in a lightweight way: update the user's app_metadata
+      // so platform_admin can see who has paid
+      const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+        app_metadata: {
+          stripe_customer_id: session.customer as string,
+          stripe_price_id: priceId,
+          subscription_paid_at: new Date().toISOString(),
+          subscription_period_end: periodEnd.toISOString(),
+        },
+      });
+
+      if (error) {
+        console.error("Error updating user metadata:", error);
+      } else {
+        console.log(`User ${userId} metadata updated with payment info`);
+      }
+    } else {
+      console.error("No business_id or user_id in session metadata");
     }
-
-    console.log(`Business ${businessId} activated until ${periodEnd.toISOString()}`);
   }
 
   return new Response(JSON.stringify({ received: true }), {

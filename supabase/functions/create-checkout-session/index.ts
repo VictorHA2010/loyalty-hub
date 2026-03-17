@@ -35,51 +35,64 @@ serve(async (req) => {
     const userId = user.id;
     const { priceId, businessId, successUrl, cancelUrl } = await req.json();
 
-    if (!priceId || !businessId || !successUrl || !cancelUrl) {
+    if (!priceId || !successUrl || !cancelUrl) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), { status: 400, headers: corsHeaders });
     }
 
-    // Verify user is business_admin of this business
-    const { data: roleData } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId)
-      .eq("business_id", businessId)
-      .eq("role", "business_admin")
-      .maybeSingle();
-
-    if (!roleData) {
-      return new Response(JSON.stringify({ error: "Not authorized for this business" }), { status: 403, headers: corsHeaders });
-    }
-
-    // Get user email
-    const email = user?.email;
-
     const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
+    const email = user?.email;
+    const supabaseAdmin = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    // Find or create Stripe customer
-    const { data: business } = await supabase
-      .from("businesses")
-      .select("stripe_customer_id, name")
-      .eq("id", businessId)
-      .single();
+    let customerId: string | undefined;
 
-    let customerId = business?.stripe_customer_id;
+    if (businessId) {
+      // ── Existing flow: user has a business ──
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .eq("business_id", businessId)
+        .eq("role", "business_admin")
+        .maybeSingle();
 
-    if (!customerId) {
-      const customer = await stripe.customers.create({
-        email: email || undefined,
-        metadata: { business_id: businessId, user_id: userId },
-        name: business?.name || undefined,
-      });
-      customerId = customer.id;
+      if (!roleData) {
+        return new Response(JSON.stringify({ error: "Not authorized for this business" }), { status: 403, headers: corsHeaders });
+      }
 
-      // Save customer ID using service role
-      const supabaseAdmin = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-      await supabaseAdmin
+      const { data: business } = await supabase
         .from("businesses")
-        .update({ stripe_customer_id: customerId })
-        .eq("id", businessId);
+        .select("stripe_customer_id, name")
+        .eq("id", businessId)
+        .single();
+
+      customerId = business?.stripe_customer_id;
+
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: email || undefined,
+          metadata: { business_id: businessId, user_id: userId },
+          name: business?.name || undefined,
+        });
+        customerId = customer.id;
+
+        await supabaseAdmin
+          .from("businesses")
+          .update({ stripe_customer_id: customerId })
+          .eq("id", businessId);
+      }
+    } else {
+      // ── New flow: user without business (new signup) ──
+      // Search for existing Stripe customer by email
+      const existingCustomers = await stripe.customers.list({ email: email || undefined, limit: 1 });
+      if (existingCustomers.data.length > 0) {
+        customerId = existingCustomers.data[0].id;
+      } else {
+        const customer = await stripe.customers.create({
+          email: email || undefined,
+          metadata: { user_id: userId },
+        });
+        customerId = customer.id;
+      }
     }
 
     const session = await stripe.checkout.sessions.create({
@@ -88,7 +101,11 @@ serve(async (req) => {
       mode: "subscription",
       success_url: successUrl,
       cancel_url: cancelUrl,
-      metadata: { business_id: businessId, price_id: priceId },
+      metadata: {
+        ...(businessId ? { business_id: businessId } : {}),
+        user_id: userId,
+        price_id: priceId,
+      },
     });
 
     return new Response(JSON.stringify({ url: session.url }), {
