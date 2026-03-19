@@ -15,83 +15,171 @@ const AdminLoyaltySettings = () => {
   const businessId = business?.id;
   const { data: settings, isLoading } = useLoyaltySettings(businessId);
   const queryClient = useQueryClient();
-  const [form, setForm] = useState({ base_points_per_purchase: '1', free_bonus_points: '0', membership_points_multiplier: '1' });
+
+  const [form, setForm] = useState({
+    amount_base:                  '10',
+    points_per_amount:            '1',
+    points_bonus:                 '0',
+    membership_points_multiplier: '2',
+  });
   const [saving, setSaving] = useState(false);
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
     if (settings && !initialized) {
       setForm({
-        base_points_per_purchase: String(settings.base_points_per_purchase),
-        free_bonus_points: String(settings.free_bonus_points),
-        membership_points_multiplier: String(settings.membership_points_multiplier),
+        amount_base:                  String(settings.amount_base                  ?? 10),
+        points_per_amount:            String(settings.points_per_amount            ?? 1),
+        points_bonus:                 String(settings.points_bonus                 ?? 0),
+        membership_points_multiplier: String(settings.membership_points_multiplier ?? 2),
       });
       setInitialized(true);
     }
   }, [settings, initialized]);
+
+  // Preview dinámico
+  const amountBase   = parseFloat(form.amount_base)   || 10;
+  const ptsPerAmount = parseFloat(form.points_per_amount) || 1;
+  const bonus        = parseInt(form.points_bonus)    || 0;
+  const multiplier   = parseFloat(form.membership_points_multiplier) || 2;
+
+  const exampleAmount  = 100;
+  const basePoints     = Math.round((exampleAmount / amountBase) * ptsPerAmount) + bonus;
+  const plusPoints     = Math.round(basePoints * multiplier);
 
   const handleSave = async () => {
     if (!businessId) return;
     setSaving(true);
     try {
       const payload = {
-        business_id: businessId,
-        base_points_per_purchase: parseInt(form.base_points_per_purchase) || 1,
-        free_bonus_points: parseInt(form.free_bonus_points) || 0,
-        membership_points_multiplier: parseFloat(form.membership_points_multiplier) || 1,
+        business_id:                  businessId,
+        amount_base:                  parseFloat(form.amount_base)   || 10,
+        points_per_amount:            parseFloat(form.points_per_amount) || 1,
+        points_bonus:                 parseInt(form.points_bonus)    || 0,
+        membership_points_multiplier: parseFloat(form.membership_points_multiplier) || 2,
         updated_at: new Date().toISOString(),
       };
       if (settings) {
-        const { error } = await supabase.from('loyalty_settings').update(payload).eq('id', settings.id);
+        const { error } = await supabase
+          .from('loyalty_settings')
+          .update(payload)
+          .eq('id', settings.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('loyalty_settings').insert(payload);
+        const { error } = await supabase
+          .from('loyalty_settings')
+          .insert(payload);
         if (error) throw error;
       }
       queryClient.invalidateQueries({ queryKey: ['loyalty-settings'] });
       toast.success('Reglas de puntos guardadas');
-    } catch (err: any) { toast.error(err.message); }
-    finally { setSaving(false); }
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (isLoading) {
-    return <AppLayout role="admin"><div className="max-w-lg space-y-4"><Skeleton className="h-8 w-48" /><Skeleton className="h-10 w-full" /></div></AppLayout>;
+    return (
+      <AppLayout role="admin">
+        <div className="max-w-lg space-y-4">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+      </AppLayout>
+    );
   }
 
   return (
     <AppLayout role="admin">
       <div className="max-w-lg">
         <h1 className="text-xl font-semibold text-foreground mb-2">Reglas de puntos</h1>
-        <p className="text-sm text-muted-foreground mb-6">Configura cómo se emiten los puntos y los bonos de regalo en tu negocio.</p>
+        <p className="text-sm text-muted-foreground mb-6">
+          Define cómo se convierten las compras en puntos para tus clientes.
+        </p>
+
         <div className="space-y-5">
-          <div className="space-y-1">
-            <Label>Puntos base por compra</Label>
-            <Input type="number" value={form.base_points_per_purchase} onChange={(e) => setForm({ ...form, base_points_per_purchase: e.target.value })} min={1} />
-            <p className="text-xs text-muted-foreground">Puntos que recibe el cliente por cada compra registrada por el staff.</p>
+
+          {/* Conversión */}
+          <div className="rounded-lg border border-border bg-card p-4 space-y-4">
+            <p className="text-sm font-medium text-foreground">💰 Conversión de compra a puntos</p>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>Monto de referencia ($)</Label>
+                <Input
+                  type="number"
+                  value={form.amount_base}
+                  onChange={(e) => setForm({ ...form, amount_base: e.target.value })}
+                  min={1}
+                />
+                <p className="text-xs text-muted-foreground">Cada cuánto dinero...</p>
+              </div>
+              <div className="space-y-1">
+                <Label>Puntos a otorgar</Label>
+                <Input
+                  type="number"
+                  value={form.points_per_amount}
+                  onChange={(e) => setForm({ ...form, points_per_amount: e.target.value })}
+                  min={1}
+                />
+                <p className="text-xs text-muted-foreground">...se dan estos puntos</p>
+              </div>
+            </div>
+
+            <div className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
+              Ejemplo: por cada{' '}
+              <span className="font-semibold text-foreground">${amountBase}</span> el cliente recibe{' '}
+              <span className="font-semibold text-foreground">{ptsPerAmount} pto{ptsPerAmount !== 1 ? 's' : ''}</span>
+            </div>
           </div>
-          <div className="rounded-lg border border-border bg-card p-4 space-y-3">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-sm font-medium text-foreground">🎁 Puntos de regalo (Bonus)</span>
-            </div>
-            <div className="space-y-1">
-              <Label>Puntos de regalo por transacción</Label>
-              <Input type="number" value={form.free_bonus_points} onChange={(e) => setForm({ ...form, free_bonus_points: e.target.value })} min={0} />
-              <p className="text-xs text-muted-foreground">
-                Puntos extra que se entregan automáticamente como regalo cada vez que el staff asigna puntos a un cliente. Se registran como tipo "bonus" en el historial.
-              </p>
-            </div>
+
+          {/* Bonus */}
+          <div className="rounded-lg border border-border bg-card p-4 space-y-2">
+            <p className="text-sm font-medium text-foreground">🎁 Puntos extra por transacción</p>
+            <Input
+              type="number"
+              value={form.points_bonus}
+              onChange={(e) => setForm({ ...form, points_bonus: e.target.value })}
+              min={0}
+            />
+            <p className="text-xs text-muted-foreground">
+              Puntos fijos que se suman en cada venta, sin importar el monto. Pon 0 para desactivar.
+            </p>
           </div>
-          <div className="rounded-lg border border-border bg-card p-4 space-y-3">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-sm font-medium text-foreground">⭐ Membresía Plus</span>
-            </div>
-            <div className="space-y-1">
-              <Label>Multiplicador de puntos para miembros Plus</Label>
-              <Input type="number" step="0.1" value={form.membership_points_multiplier} onChange={(e) => setForm({ ...form, membership_points_multiplier: e.target.value })} min={1} />
-              <p className="text-xs text-muted-foreground">Los clientes con membresía Plus reciben puntos base × este multiplicador. Ejemplo: 2 = doble de puntos.</p>
-            </div>
+
+          {/* Membresía Plus */}
+          <div className="rounded-lg border border-border bg-card p-4 space-y-2">
+            <p className="text-sm font-medium text-foreground">⭐ Multiplicador para miembros Plus</p>
+            <Input
+              type="number"
+              step="0.1"
+              value={form.membership_points_multiplier}
+              onChange={(e) => setForm({ ...form, membership_points_multiplier: e.target.value })}
+              min={1}
+            />
+            <p className="text-xs text-muted-foreground">
+              Los puntos calculados se multiplican por este número. Ejemplo: 2 = doble de puntos.
+            </p>
           </div>
-          <Button onClick={handleSave} disabled={saving} className="w-full">{saving ? 'Guardando...' : 'Guardar reglas'}</Button>
+
+          {/* Preview dinámico */}
+          <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-1">
+            <p className="text-xs font-semibold text-primary uppercase tracking-wider">Vista previa con $100 de compra</p>
+            <p className="text-sm text-foreground">
+              Cliente normal →{' '}
+              <span className="font-bold text-primary">{basePoints} puntos</span>
+            </p>
+            <p className="text-sm text-foreground">
+              Cliente Plus (x{multiplier}) →{' '}
+              <span className="font-bold text-primary">{plusPoints} puntos</span>
+            </p>
+          </div>
+
+          <Button onClick={handleSave} disabled={saving} className="w-full">
+            {saving ? 'Guardando...' : 'Guardar reglas'}
+          </Button>
         </div>
       </div>
     </AppLayout>

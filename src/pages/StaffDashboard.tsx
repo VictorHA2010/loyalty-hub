@@ -87,19 +87,26 @@ function CustomerCard({
 
   const calcPoints = (amount: number): number => {
     if (!amount || amount <= 0) return 0;
-    const ppc   = Number(settings?.points_per_currency ?? 0.1);
-    const bonus = Number(settings?.points_bonus        ?? 0);
-    let pts = Math.round(amount * ppc) + bonus;
+
+    const amountBase = Number(settings?.amount_base ?? 10);
+    const pointsPerAmount = Number(settings?.points_per_amount ?? 1);
+    const bonus = Number(settings?.points_bonus ?? 0);
+
+    let pts = Math.round((amount / amountBase) * pointsPerAmount) + bonus;
+
     const hasActiveMembership =
       membership?.status === 'active' &&
       (membership?.is_plus || Number(membership?.points_multiplier) > 1);
+
     if (hasActiveMembership) {
       const multiplier =
         Number(membership?.points_multiplier) ||
         Number(settings?.membership_points_multiplier) ||
         1;
+
       pts = Math.round(pts * multiplier);
     }
+
     return pts;
   };
 
@@ -109,20 +116,25 @@ function CustomerCard({
   const handleAssignPoints = async () => {
     const amount = parseFloat(saleAmount);
     if (!amount || amount <= 0) return;
+
     setAssigning(true);
     try {
       const finalPoints = calcPoints(amount);
+
       const { error } = await supabase.from('points_ledger').insert({
         business_id: businessId,
-        user_id:     user.id,
-        points:      finalPoints,
-        type:        'earn',
-        note:        `venta_$${amount}`,
+        user_id: user.id,
+        points: finalPoints,
+        type: 'earn',
+        note: `venta_$${amount}`,
       });
+
       if (error) throw error;
+
       onBalanceUpdate(balance + finalPoints);
       setSaleAmount('');
       toast.success(`Venta: $${amount} → ${finalPoints} puntos`);
+
       const { data } = await supabase
         .from('points_ledger')
         .select('*')
@@ -130,6 +142,7 @@ function CustomerCard({
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(10);
+
       setActivity(data || []);
     } catch (err: any) {
       toast.error(err.message);
@@ -140,7 +153,6 @@ function CustomerCard({
 
   return (
     <div className="border border-border rounded-xl bg-card p-5 space-y-4 shadow-card">
-      {/* Header cliente */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center overflow-hidden">
@@ -169,7 +181,6 @@ function CustomerCard({
         </button>
       </div>
 
-      {/* Input monto */}
       <div className="space-y-2">
         <div className="flex gap-2">
           <div className="relative flex-1">
@@ -197,7 +208,6 @@ function CustomerCard({
           </Button>
         </div>
 
-        {/* Preview puntos */}
         {previewAmount > 0 && (
           <p className="text-xs text-muted-foreground pl-1">
             Venta: <span className="font-semibold text-foreground">${previewAmount}</span>
@@ -210,7 +220,6 @@ function CustomerCard({
         )}
       </div>
 
-      {/* Activity feed */}
       <div>
         <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">
           Actividad reciente
@@ -224,16 +233,24 @@ function CustomerCard({
             {activity.map((a) => (
               <div key={a.id} className="flex justify-between text-xs border-b border-border py-1.5">
                 <span className="text-muted-foreground">
-                  {a.type === 'earn'       ? '➕' :
-                   a.type === 'bonus'      ? '🎁' :
-                   a.type === 'redeem'     ? '🎟️' :
-                   a.type === 'referral'   ? '👥' :
-                   a.type === 'promotion'  ? '🎉' :
-                   a.type === 'membership' ? '⭐' : '📝'}{' '}
+                  {a.type === 'earn'
+                    ? '➕'
+                    : a.type === 'bonus'
+                    ? '🎁'
+                    : a.type === 'redeem'
+                    ? '🎟️'
+                    : a.type === 'referral'
+                    ? '👥'
+                    : a.type === 'promotion'
+                    ? '🎉'
+                    : a.type === 'membership'
+                    ? '⭐'
+                    : '📝'}{' '}
                   {a.note || a.type}
                 </span>
                 <span className={`font-mono font-semibold ${a.points >= 0 ? 'text-primary' : 'text-destructive'}`}>
-                  {a.points >= 0 ? '+' : ''}{a.points}
+                  {a.points >= 0 ? '+' : ''}
+                  {a.points}
                 </span>
               </div>
             ))}
@@ -298,7 +315,9 @@ function ScanTab() {
 
   const stopCamera = useCallback(async () => {
     if (scannerRef.current) {
-      try { await scannerRef.current.stop(); } catch {}
+      try {
+        await scannerRef.current.stop();
+      } catch {}
       scannerRef.current = null;
     }
     setScanning(false);
@@ -320,7 +339,9 @@ function ScanTab() {
       }
       const { Html5Qrcode } = await import('html5-qrcode');
       if (scannerRef.current) {
-        try { await scannerRef.current.stop(); } catch {}
+        try {
+          await scannerRef.current.stop();
+        } catch {}
       }
       const scanner = new Html5Qrcode('qr-reader');
       scannerRef.current = scanner;
@@ -350,7 +371,9 @@ function ScanTab() {
   }, [lookupByToken]);
 
   useEffect(() => {
-    return () => { stopCamera(); };
+    return () => {
+      stopCamera();
+    };
   }, [stopCamera]);
 
   const handleManualScan = () => lookupByToken(qrToken);
@@ -363,7 +386,6 @@ function ScanTab() {
 
   return (
     <div className="space-y-5">
-      {/* Hero scan button */}
       {!wantScan && !scanning && !scannedUser && (
         <div className="text-center py-6">
           <button
