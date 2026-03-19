@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useBusiness } from '@/contexts/BusinessContext';
-import { useAuth } from '@/contexts/AuthContext';
 import { useBusinessRedemptions, useLoyaltySettings } from '@/hooks/useData';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -65,7 +64,7 @@ function CustomerCard({
   onDismiss: () => void;
   onBalanceUpdate: (newBalance: number) => void;
 }) {
-  const [pointsToAssign, setPointsToAssign] = useState('');
+  const [saleAmount, setSaleAmount] = useState('');
   const [assigning, setAssigning] = useState(false);
   const [activity, setActivity] = useState<any[]>([]);
   const [loadingActivity, setLoadingActivity] = useState(true);
@@ -86,41 +85,44 @@ function CustomerCard({
       });
   }, [user?.id, businessId]);
 
+  const calcPoints = (amount: number): number => {
+    if (!amount || amount <= 0) return 0;
+    const ppc   = Number(settings?.points_per_currency ?? 0.1);
+    const bonus = Number(settings?.points_bonus        ?? 0);
+    let pts = Math.round(amount * ppc) + bonus;
+    const hasActiveMembership =
+      membership?.status === 'active' &&
+      (membership?.is_plus || Number(membership?.points_multiplier) > 1);
+    if (hasActiveMembership) {
+      const multiplier =
+        Number(membership?.points_multiplier) ||
+        Number(settings?.membership_points_multiplier) ||
+        1;
+      pts = Math.round(pts * multiplier);
+    }
+    return pts;
+  };
+
+  const previewAmount = parseFloat(saleAmount) || 0;
+  const previewPoints = calcPoints(previewAmount);
+
   const handleAssignPoints = async () => {
-    let pts = parseInt(pointsToAssign);
-    if (!pts || pts <= 0) return;
+    const amount = parseFloat(saleAmount);
+    if (!amount || amount <= 0) return;
     setAssigning(true);
     try {
-      let finalPoints = pts;
-      if (membership?.is_plus && membership.status === 'active') {
-        const multiplier = settings?.membership_points_multiplier || membership?.points_multiplier || 1;
-        finalPoints = Math.round(finalPoints * Number(multiplier));
-      }
+      const finalPoints = calcPoints(amount);
       const { error } = await supabase.from('points_ledger').insert({
         business_id: businessId,
-        user_id: user.id,
-        points: finalPoints,
-        type: 'earn',
-        note: finalPoints !== pts
-          ? `staff_assignment (x${membership?.points_multiplier || settings?.membership_points_multiplier})`
-          : 'staff_assignment',
+        user_id:     user.id,
+        points:      finalPoints,
+        type:        'earn',
+        note:        `venta_$${amount}`,
       });
       if (error) throw error;
-
-      let totalAdded = finalPoints;
-      if (settings?.free_bonus_points && settings.free_bonus_points > 0) {
-        await supabase.from('points_ledger').insert({
-          business_id: businessId,
-          user_id: user.id,
-          points: settings.free_bonus_points,
-          type: 'bonus',
-          note: 'bonus_points',
-        });
-        totalAdded += settings.free_bonus_points;
-      }
-      onBalanceUpdate(balance + totalAdded);
-      setPointsToAssign('');
-      toast.success(`${totalAdded} puntos asignados`);
+      onBalanceUpdate(balance + finalPoints);
+      setSaleAmount('');
+      toast.success(`Venta: $${amount} → ${finalPoints} puntos`);
       const { data } = await supabase
         .from('points_ledger')
         .select('*')
@@ -138,6 +140,7 @@ function CustomerCard({
 
   return (
     <div className="border border-border rounded-xl bg-card p-5 space-y-4 shadow-card">
+      {/* Header cliente */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center overflow-hidden">
@@ -151,33 +154,67 @@ function CustomerCard({
             <p className="font-semibold text-foreground">{user.full_name || 'Sin nombre'}</p>
             <p className="text-xs text-muted-foreground">{user.email}</p>
             <p className="text-lg font-bold font-mono text-primary">{balance} pts</p>
-            {membership?.is_plus && membership.status === 'active' && (
-              <span className="text-xs font-mono font-semibold text-primary">★ Plus (x{membership?.points_multiplier || 1})</span>
+            {membership?.status === 'active' && (membership?.is_plus || Number(membership?.points_multiplier) > 1) && (
+              <span className="text-xs font-mono font-semibold text-primary">
+                ★ Plus (x{membership?.points_multiplier || 1})
+              </span>
             )}
           </div>
         </div>
-        <button onClick={onDismiss} className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors">
+        <button
+          onClick={onDismiss}
+          className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+        >
           <X size={18} />
         </button>
       </div>
 
-      <div className="flex gap-2">
-        <Input
-          type="number"
-          placeholder="Puntos a asignar"
-          value={pointsToAssign}
-          onChange={(e) => setPointsToAssign(e.target.value)}
-          min={1}
-          className="h-11"
-        />
-        <Button onClick={handleAssignPoints} disabled={assigning} className="h-11 font-semibold">
-          <Plus size={18} className="mr-1" />
-          Asignar
-        </Button>
+      {/* Input monto */}
+      <div className="space-y-2">
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-semibold text-sm">
+              $
+            </span>
+            <Input
+              type="number"
+              placeholder="Monto de venta"
+              value={saleAmount}
+              onChange={(e) => setSaleAmount(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleAssignPoints()}
+              min={0.01}
+              step="0.01"
+              className="h-11 pl-7"
+            />
+          </div>
+          <Button
+            onClick={handleAssignPoints}
+            disabled={assigning || previewPoints <= 0}
+            className="h-11 font-semibold"
+          >
+            <Plus size={18} className="mr-1" />
+            Registrar
+          </Button>
+        </div>
+
+        {/* Preview puntos */}
+        {previewAmount > 0 && (
+          <p className="text-xs text-muted-foreground pl-1">
+            Venta: <span className="font-semibold text-foreground">${previewAmount}</span>
+            {' → '}
+            <span className="font-bold text-primary">{previewPoints} puntos</span>
+            {membership?.status === 'active' && (membership?.is_plus || Number(membership?.points_multiplier) > 1) && (
+              <span className="text-primary"> (x{membership?.points_multiplier || 1} membresía)</span>
+            )}
+          </p>
+        )}
       </div>
 
+      {/* Activity feed */}
       <div>
-        <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Actividad reciente</p>
+        <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">
+          Actividad reciente
+        </p>
         {loadingActivity ? (
           <Skeleton className="h-12 w-full rounded-lg" />
         ) : activity.length === 0 ? (
@@ -187,7 +224,12 @@ function CustomerCard({
             {activity.map((a) => (
               <div key={a.id} className="flex justify-between text-xs border-b border-border py-1.5">
                 <span className="text-muted-foreground">
-                  {a.type === 'earn' ? '➕' : a.type === 'bonus' ? '🎁' : a.type === 'redeem' ? '🎟️' : a.type === 'referral' ? '👥' : a.type === 'promotion' ? '🎉' : a.type === 'membership' ? '⭐' : '📝'}{' '}
+                  {a.type === 'earn'       ? '➕' :
+                   a.type === 'bonus'      ? '🎁' :
+                   a.type === 'redeem'     ? '🎟️' :
+                   a.type === 'referral'   ? '👥' :
+                   a.type === 'promotion'  ? '🎉' :
+                   a.type === 'membership' ? '⭐' : '📝'}{' '}
                   {a.note || a.type}
                 </span>
                 <span className={`font-mono font-semibold ${a.points >= 0 ? 'text-primary' : 'text-destructive'}`}>
