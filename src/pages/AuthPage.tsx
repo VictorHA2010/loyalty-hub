@@ -15,36 +15,36 @@ const AuthPage = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  const handleRedirect = async (userId: string) => {
+    // Buscamos si el usuario ya tiene un negocio asociado
+    const { data: business } = await supabase
+      .from('businesses')
+      .select('slug')
+      .eq('owner_id', userId)
+      .maybeSingle();
+
+    if (business) {
+      navigate(`/admin/${business.slug}`);
+    } else {
+      // Si no tiene negocio, lo mandamos a contratar/elegir plan
+      navigate('/subscription-plans');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
       if (mode === 'login') {
-        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email, password });
-        if (authError) throw authError;
-
-        // --- LÓGICA DE REDIRECCIÓN INTELIGENTE ---
-        // Buscamos si el usuario ya tiene un negocio asociado (usando owner_id que creamos)
-        const { data: business, error: bizError } = await supabase
-          .from('businesses')
-          .select('slug')
-          .eq('owner_id', authData.user.id)
-          .maybeSingle();
-
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
         toast.success('Sesión iniciada');
-
-        if (business) {
-          // Si tiene negocio, va a su URL privada
-          navigate(`/admin/${business.slug}`);
-        } else {
-          // MÓDULO ONBOARDING: Si no tiene negocio, va a elegir plan
-          navigate('/subscription-plans');
-        }
-        // ------------------------------------------
+        await handleRedirect(data.user.id);
 
       } else if (mode === 'register') {
-        const { error } = await supabase.auth.signUp({
+        // Intentamos el registro
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -52,8 +52,29 @@ const AuthPage = () => {
             emailRedirectTo: window.location.origin
           }
         });
-        if (error) throw error;
-        toast.success('Cuenta creada. Revisa tu email para confirmar.');
+
+        // --- TRUCO DE ACCESO UNIVERSAL ---
+        // Si el correo ya existe, intentamos hacer login automáticamente
+        if (signUpError?.message.includes("already registered") || signUpError?.status === 400) {
+          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ 
+            email, 
+            password 
+          });
+
+          if (signInError) {
+            throw new Error("Este correo ya está registrado. Si es tuyo, verifica la contraseña.");
+          }
+
+          toast.success('Accediendo a tu cuenta existente...');
+          await handleRedirect(signInData.user.id);
+          return;
+        }
+
+        if (signUpError) throw signUpError;
+        
+        toast.success('Cuenta creada. Revisa tu email.');
+        if (signUpData.user) await handleRedirect(signUpData.user.id);
+
       } else if (mode === 'forgot') {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${window.location.origin}/reset-password`
