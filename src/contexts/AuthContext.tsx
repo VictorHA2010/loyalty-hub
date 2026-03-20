@@ -1,3 +1,5 @@
+// src/contexts/AuthContext.tsx
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -41,38 +43,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const resolveGlobalRole = async (userId: string) => {
     try {
-      const { data } = await supabase
+      // 1. ¿Es platform_admin? → tabla user_roles (esta sí existe para admins de plataforma)
+      const { data: roleData } = await supabase
         .from('user_roles')
-        .select('role, business_id')
-        .eq('user_id', userId);
+        .select('role')
+        .eq('user_id', userId)
+        .eq('role', 'platform_admin')
+        .maybeSingle();
 
-      if (!data || data.length === 0) {
-        setGlobalRole('customer');
-        return;
-      }
-
-      // Check for platform_admin first (business_id can be null)
-      const isPlatformAdmin = data.some(r => r.role === 'platform_admin');
-      if (isPlatformAdmin) {
+      if (roleData) {
         setGlobalRole('platform_admin');
         return;
       }
 
-      // Check for business_admin
-      const isBusinessAdmin = data.some(r => r.role === 'business_admin');
-      if (isBusinessAdmin) {
+      // 2. ¿Es business_admin activo en algún negocio? → tabla business_members
+      const { data: adminData } = await supabase
+        .from('business_members')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('role', 'business_admin')
+        .eq('status', 'active')
+        .maybeSingle();
+
+      if (adminData) {
         setGlobalRole('business_admin');
         return;
       }
 
-      // Check for staff
-      const isStaff = data.some(r => r.role === 'staff');
-      if (isStaff) {
+      // 3. ¿Es staff activo en algún negocio?
+      const { data: staffData } = await supabase
+        .from('business_members')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('role', 'staff')
+        .eq('status', 'active')
+        .maybeSingle();
+
+      if (staffData) {
         setGlobalRole('staff');
         return;
       }
 
+      // 4. Es cliente (o usuario sin negocio que quiere contratar)
       setGlobalRole('customer');
+
     } catch {
       setGlobalRole('customer');
     }
@@ -83,7 +97,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        // Defer to avoid deadlock with Supabase client
         setTimeout(() => resolveGlobalRole(session.user.id), 0);
       } else {
         setGlobalRole(null);
