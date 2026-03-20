@@ -1,5 +1,3 @@
-// src/pages/Index.tsx
-
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,32 +18,38 @@ const Index = () => {
       const userId = session.user.id;
 
       try {
-        // 1. ¿Es business_admin de algún negocio?
-        const { data: adminMember } = await supabase
-          .from('business_members')
-          .select('business_id, businesses(slug)')
-          .eq('user_id', userId)
-          .eq('role', 'business_admin')
-          .eq('status', 'active')
-          .maybeSingle();
+        // 0. ¿Es platform_admin?
+        const { data: roles } = await supabase
+          .from('user_roles')
+          .select('role, business_id')
+          .eq('user_id', userId);
 
-        if (adminMember) {
-          const slug = (adminMember.businesses as any)?.slug;
-          if (slug) { navigate(`/admin/${slug}`); return; }
+        const isPlatformAdmin = roles?.some(r => r.role === 'platform_admin');
+        if (isPlatformAdmin) {
+          navigate('/platform');
+          return;
         }
 
-        // 2. ¿Es staff de algún negocio?
-        const { data: staffMember } = await supabase
-          .from('business_members')
-          .select('business_id, businesses(slug)')
-          .eq('user_id', userId)
-          .eq('role', 'staff')
-          .eq('status', 'active')
-          .maybeSingle();
+        // 1. ¿Es business_admin?
+        const adminRole = roles?.find(r => r.role === 'business_admin' && r.business_id);
+        if (adminRole) {
+          const { data: biz } = await supabase
+            .from('businesses')
+            .select('slug')
+            .eq('id', adminRole.business_id!)
+            .maybeSingle();
+          if (biz?.slug) { navigate(`/admin/${biz.slug}`); return; }
+        }
 
-        if (staffMember) {
-          const slug = (staffMember.businesses as any)?.slug;
-          if (slug) { navigate(`/staff/${slug}`); return; }
+        // 2. ¿Es staff?
+        const staffRole = roles?.find(r => r.role === 'staff' && r.business_id);
+        if (staffRole) {
+          const { data: biz } = await supabase
+            .from('businesses')
+            .select('slug')
+            .eq('id', staffRole.business_id!)
+            .maybeSingle();
+          if (biz?.slug) { navigate(`/staff/${biz.slug}`); return; }
         }
 
         // 3. ¿Es cliente de algún negocio?
@@ -53,15 +57,21 @@ const Index = () => {
           .from('customer_businesses')
           .select('business_id, businesses(slug)')
           .eq('user_id', userId)
+          .limit(1)
           .maybeSingle();
 
         if (customerLink) {
           const slug = (customerLink.businesses as any)?.slug;
-          if (slug) { navigate(`/b/${slug}`); return; }
+          if (slug) { navigate(`/b/${slug}/app`); return; }
         }
 
-        // 4. Sin vínculo → onboarding
-        navigate('/subscription-plans');
+        // 4. Sin vínculo → check pago → planes o activación
+        const hasPaid = localStorage.getItem('loyaltyhub_payment_completed') === 'true';
+        if (hasPaid) {
+          navigate('/activation');
+        } else {
+          navigate('/subscription-plans');
+        }
 
       } catch (error) {
         console.error('[Index] Error en redirección:', error);

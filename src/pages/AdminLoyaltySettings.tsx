@@ -17,10 +17,9 @@ const AdminLoyaltySettings = () => {
   const queryClient = useQueryClient();
 
   const [form, setForm] = useState({
-    amount_base:                  '10',
-    points_per_amount:            '1',
-    points_bonus:                 '0',
-    membership_points_multiplier: '2',
+    base_points_per_purchase:      '1',
+    free_bonus_points:             '0',
+    membership_points_multiplier:  '2',
   });
   const [saving, setSaving] = useState(false);
   const [initialized, setInitialized] = useState(false);
@@ -28,24 +27,20 @@ const AdminLoyaltySettings = () => {
   useEffect(() => {
     if (settings && !initialized) {
       setForm({
-        amount_base:                  String(settings.amount_base                  ?? 10),
-        points_per_amount:            String(settings.points_per_amount            ?? 1),
-        points_bonus:                 String(settings.points_bonus                 ?? 0),
-        membership_points_multiplier: String(settings.membership_points_multiplier ?? 2),
+        base_points_per_purchase:      String(settings.base_points_per_purchase ?? 1),
+        free_bonus_points:             String(settings.free_bonus_points ?? 0),
+        membership_points_multiplier:  String(settings.membership_points_multiplier ?? 2),
       });
       setInitialized(true);
     }
   }, [settings, initialized]);
 
-  // Preview dinámico
-  const amountBase   = parseFloat(form.amount_base)   || 10;
-  const ptsPerAmount = parseFloat(form.points_per_amount) || 1;
-  const bonus        = parseInt(form.points_bonus)    || 0;
-  const multiplier   = parseFloat(form.membership_points_multiplier) || 2;
+  const basePoints = parseInt(form.base_points_per_purchase) || 1;
+  const bonus      = parseInt(form.free_bonus_points) || 0;
+  const multiplier = parseFloat(form.membership_points_multiplier) || 2;
 
-  const exampleAmount  = 100;
-  const basePoints     = Math.round((exampleAmount / amountBase) * ptsPerAmount) + bonus;
-  const plusPoints     = Math.round(basePoints * multiplier);
+  const examplePoints = basePoints + bonus;
+  const plusPoints     = Math.round(examplePoints * multiplier);
 
   const handleSave = async () => {
     if (!businessId) return;
@@ -53,14 +48,12 @@ const AdminLoyaltySettings = () => {
     try {
       const payload = {
         business_id:                  businessId,
-        amount_base:                  parseFloat(form.amount_base)   || 10,
-        points_per_amount:            parseFloat(form.points_per_amount) || 1,
-        points_bonus:                 parseInt(form.points_bonus)    || 0,
+        base_points_per_purchase:     parseInt(form.base_points_per_purchase) || 1,
+        free_bonus_points:            parseInt(form.free_bonus_points) || 0,
         membership_points_multiplier: parseFloat(form.membership_points_multiplier) || 2,
         updated_at: new Date().toISOString(),
       };
 
-      // CORRECCIÓN TÉCNICA: Usamos upsert para evitar errores de duplicados por negocio
       const { error } = await supabase
         .from('loyalty_settings')
         .upsert({
@@ -100,38 +93,18 @@ const AdminLoyaltySettings = () => {
 
         <div className="space-y-5">
 
-          {/* Conversión */}
-          <div className="rounded-lg border border-border bg-card p-4 space-y-4">
-            <p className="text-sm font-medium text-foreground">💰 Conversión de compra a puntos</p>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label>Monto de referencia ($)</Label>
-                <Input
-                  type="number"
-                  value={form.amount_base}
-                  onChange={(e) => setForm({ ...form, amount_base: e.target.value })}
-                  min={1}
-                />
-                <p className="text-xs text-muted-foreground">Cada cuánto dinero...</p>
-              </div>
-              <div className="space-y-1">
-                <Label>Puntos a otorgar</Label>
-                <Input
-                  type="number"
-                  value={form.points_per_amount}
-                  onChange={(e) => setForm({ ...form, points_per_amount: e.target.value })}
-                  min={1}
-                />
-                <p className="text-xs text-muted-foreground">...se dan estos puntos</p>
-              </div>
-            </div>
-
-            <div className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
-              Ejemplo: por cada{' '}
-              <span className="font-semibold text-foreground">${amountBase}</span> el cliente recibe{' '}
-              <span className="font-semibold text-foreground">{ptsPerAmount} pto{ptsPerAmount !== 1 ? 's' : ''}</span>
-            </div>
+          {/* Puntos base */}
+          <div className="rounded-lg border border-border bg-card p-4 space-y-2">
+            <p className="text-sm font-medium text-foreground">💰 Puntos base por compra</p>
+            <Input
+              type="number"
+              value={form.base_points_per_purchase}
+              onChange={(e) => setForm({ ...form, base_points_per_purchase: e.target.value })}
+              min={1}
+            />
+            <p className="text-xs text-muted-foreground">
+              Puntos que se otorgan por cada transacción registrada.
+            </p>
           </div>
 
           {/* Bonus */}
@@ -139,8 +112,8 @@ const AdminLoyaltySettings = () => {
             <p className="text-sm font-medium text-foreground">🎁 Puntos extra por transacción</p>
             <Input
               type="number"
-              value={form.points_bonus}
-              onChange={(e) => setForm({ ...form, points_bonus: e.target.value })}
+              value={form.free_bonus_points}
+              onChange={(e) => setForm({ ...form, free_bonus_points: e.target.value })}
               min={0}
             />
             <p className="text-xs text-muted-foreground">
@@ -165,10 +138,10 @@ const AdminLoyaltySettings = () => {
 
           {/* Preview dinámico */}
           <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-1">
-            <p className="text-xs font-semibold text-primary uppercase tracking-wider">Vista previa con $100 de compra</p>
+            <p className="text-xs font-semibold text-primary uppercase tracking-wider">Vista previa por compra</p>
             <p className="text-sm text-foreground">
               Cliente normal →{' '}
-              <span className="font-bold text-primary">{basePoints} puntos</span>
+              <span className="font-bold text-primary">{examplePoints} puntos</span>
             </p>
             <p className="text-sm text-foreground">
               Cliente Plus (x{multiplier}) →{' '}
