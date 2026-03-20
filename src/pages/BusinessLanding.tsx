@@ -1,3 +1,5 @@
+// src/pages/BusinessLanding.tsx
+
 import { useNavigate } from 'react-router-dom';
 import { useBusiness } from '@/contexts/BusinessContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -15,9 +17,9 @@ const BusinessLanding = () => {
   useEffect(() => {
     if (!user || !business) return;
 
-    const autoLink = async () => {
+    const autoLinkAndEnter = async () => {
       try {
-        // Auto-vincular como cliente si no existe
+        // Vincular como cliente si no existe el vínculo
         const { data: existing } = await supabase
           .from('customer_businesses')
           .select('id')
@@ -34,25 +36,13 @@ const BusinessLanding = () => {
         console.error('[BusinessLanding] Error al vincular:', err);
       }
 
-      // Check if admin/staff for this business
-      const { data: memberRow } = await supabase
-        .from('business_members')
-        .select('role')
-        .eq('user_id', user.id)
-        .eq('business_id', business.id)
-        .eq('status', 'active')
-        .maybeSingle();
-
-      if (memberRow?.role === 'business_admin') {
-        navigate(`/admin/${business.slug}`, { replace: true });
-      } else if (memberRow?.role === 'staff') {
-        navigate(`/staff/${business.slug}`, { replace: true });
-      } else {
-        navigate(`/b/${business.slug}/app`, { replace: true });
-      }
+      // FIX: siempre ir a /app como cliente.
+      // El usuario eligió entrar a este negocio como cliente.
+      // Si quiere cambiar a su panel de admin/staff, usa el RoleSwitcher.
+      navigate(`/b/${business.slug}/app`, { replace: true });
     };
 
-    autoLink();
+    autoLinkAndEnter();
   }, [user, business, navigate]);
 
   if (loading) {
@@ -81,7 +71,11 @@ const BusinessLanding = () => {
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="text-center space-y-8 px-4">
         {business.logo_url ? (
-          <img src={business.logo_url} alt={business.name} className="w-24 h-24 rounded-2xl mx-auto object-cover shadow-elevated" />
+          <img
+            src={business.logo_url}
+            alt={business.name}
+            className="w-24 h-24 rounded-2xl mx-auto object-cover shadow-elevated"
+          />
         ) : (
           <div className="w-24 h-24 rounded-2xl bg-primary/10 mx-auto flex items-center justify-center shadow-elevated">
             <Shield size={36} className="text-primary" />
@@ -91,7 +85,9 @@ const BusinessLanding = () => {
           <h1 className="text-3xl font-extrabold text-foreground">{business.name}</h1>
           <p className="text-sm text-muted-foreground mt-2">Programa de lealtad</p>
           {business.short_description && (
-            <p className="text-sm text-muted-foreground mt-1 max-w-xs mx-auto">{business.short_description}</p>
+            <p className="text-sm text-muted-foreground mt-1 max-w-xs mx-auto">
+              {business.short_description}
+            </p>
           )}
         </div>
         <div className="space-y-3 max-w-xs mx-auto">
@@ -102,7 +98,11 @@ const BusinessLanding = () => {
           >
             Iniciar sesión
           </Button>
-          <Button variant="outline" className="w-full h-12 font-semibold" onClick={() => navigate(`/b/${business.slug}/login?mode=register`)}>
+          <Button
+            variant="outline"
+            className="w-full h-12 font-semibold"
+            onClick={() => navigate(`/b/${business.slug}/login?mode=register`)}
+          >
             Crear cuenta
           </Button>
         </div>
