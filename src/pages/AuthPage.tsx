@@ -15,7 +15,7 @@ async function handleRedirect(
   navigate: ReturnType<typeof useNavigate>,
   userId: string
 ) {
-  // 1. ¿Es business_admin?
+  // 1. ¿Es business_admin? → su panel de admin
   const { data: adminMember } = await supabase
     .from('business_members')
     .select('business_id, businesses(slug)')
@@ -29,7 +29,7 @@ async function handleRedirect(
     if (slug) { navigate(`/admin/${slug}`); return; }
   }
 
-  // 2. ¿Es staff?
+  // 2. ¿Es staff? → su panel de staff
   const { data: staffMember } = await supabase
     .from('business_members')
     .select('business_id, businesses(slug)')
@@ -43,19 +43,9 @@ async function handleRedirect(
     if (slug) { navigate(`/staff/${slug}`); return; }
   }
 
-  // 3. ¿Es cliente?
-  const { data: customerLink } = await supabase
-    .from('customer_businesses')
-    .select('business_id, businesses(slug)')
-    .eq('user_id', userId)
-    .maybeSingle();
-
-  if (customerLink) {
-    const slug = (customerLink.businesses as any)?.slug;
-    if (slug) { navigate(`/b/${slug}`); return; }
-  }
-
-  // 4. Sin vínculo → onboarding
+  // 3. Si solo es cliente o no tiene vínculo → planes
+  // Desde /login el usuario quiere CREAR o GESTIONAR su negocio.
+  // Si quiere entrar como cliente usa /b/:slug/login directamente.
   navigate('/subscription-plans');
 }
 
