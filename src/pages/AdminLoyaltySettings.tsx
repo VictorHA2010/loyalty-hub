@@ -59,18 +59,17 @@ const AdminLoyaltySettings = () => {
         membership_points_multiplier: parseFloat(form.membership_points_multiplier) || 2,
         updated_at: new Date().toISOString(),
       };
-      if (settings) {
-        const { error } = await supabase
-          .from('loyalty_settings')
-          .update(payload)
-          .eq('id', settings.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('loyalty_settings')
-          .insert(payload);
-        if (error) throw error;
-      }
+
+      // CORRECCIÓN TÉCNICA: Usamos upsert para evitar errores de duplicados por negocio
+      const { error } = await supabase
+        .from('loyalty_settings')
+        .upsert({
+          ...(settings?.id ? { id: settings.id } : {}),
+          ...payload
+        });
+
+      if (error) throw error;
+      
       queryClient.invalidateQueries({ queryKey: ['loyalty-settings'] });
       toast.success('Reglas de puntos guardadas');
     } catch (err: any) {

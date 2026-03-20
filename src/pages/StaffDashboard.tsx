@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { QrCode, Plus, X, Check, Search, Gift, Users, Camera, StopCircle } from 'lucide-react';
+import { QrCode, Plus, X, Check, Search, Gift, Users, Camera, StopCircle, Hash } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import AppLayout from '@/components/AppLayout';
 
@@ -65,6 +65,7 @@ function CustomerCard({
   onBalanceUpdate: (newBalance: number) => void;
 }) {
   const [saleAmount, setSaleAmount] = useState('');
+  const [ticketFolio, setTicketFolio] = useState(''); // Estado para el Folio
   const [assigning, setAssigning] = useState(false);
   const [activity, setActivity] = useState<any[]>([]);
   const [loadingActivity, setLoadingActivity] = useState(true);
@@ -92,8 +93,10 @@ function CustomerCard({
     const pointsPerAmount = Number(settings?.points_per_amount ?? 1);
     const bonus = Number(settings?.points_bonus ?? 0);
 
+    // Cálculo base
     let pts = Math.round((amount / amountBase) * pointsPerAmount) + bonus;
 
+    // Verificación de membresía activa para el multiplicador
     const hasActiveMembership =
       membership?.status === 'active' &&
       (membership?.is_plus || Number(membership?.points_multiplier) > 1);
@@ -115,7 +118,14 @@ function CustomerCard({
 
   const handleAssignPoints = async () => {
     const amount = parseFloat(saleAmount);
-    if (!amount || amount <= 0) return;
+    if (!amount || amount <= 0) {
+        toast.error("Ingresa un monto válido");
+        return;
+    }
+    if (!ticketFolio.trim()) {
+        toast.error("El folio del ticket es obligatorio");
+        return;
+    }
 
     setAssigning(true);
     try {
@@ -126,14 +136,16 @@ function CustomerCard({
         user_id: user.id,
         points: finalPoints,
         type: 'earn',
-        note: `venta_$${amount}`,
+        // Guardamos monto y folio en la nota para que el dueño pueda auditar
+        note: `Venta: $${amount} | Folio: ${ticketFolio}`, 
       });
 
       if (error) throw error;
 
       onBalanceUpdate(balance + finalPoints);
       setSaleAmount('');
-      toast.success(`Venta: $${amount} → ${finalPoints} puntos`);
+      setTicketFolio('');
+      toast.success(`¡Puntos asignados! Folio registrado: ${ticketFolio}`);
 
       const { data } = await supabase
         .from('points_ledger')
@@ -152,7 +164,7 @@ function CustomerCard({
   };
 
   return (
-    <div className="border border-border rounded-xl bg-card p-5 space-y-4 shadow-card">
+    <div className="border border-border rounded-xl bg-card p-5 space-y-4 shadow-card animate-in fade-in zoom-in duration-200">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center overflow-hidden">
@@ -166,11 +178,6 @@ function CustomerCard({
             <p className="font-semibold text-foreground">{user.full_name || 'Sin nombre'}</p>
             <p className="text-xs text-muted-foreground">{user.email}</p>
             <p className="text-lg font-bold font-mono text-primary">{balance} pts</p>
-            {membership?.status === 'active' && (membership?.is_plus || Number(membership?.points_multiplier) > 1) && (
-              <span className="text-xs font-mono font-semibold text-primary">
-                ★ Plus (x{membership?.points_multiplier || 1})
-              </span>
-            )}
           </div>
         </div>
         <button
@@ -181,42 +188,47 @@ function CustomerCard({
         </button>
       </div>
 
-      <div className="space-y-2">
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-semibold text-sm">
-              $
-            </span>
-            <Input
-              type="number"
-              placeholder="Monto de venta"
-              value={saleAmount}
-              onChange={(e) => setSaleAmount(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleAssignPoints()}
-              min={0.01}
-              step="0.01"
-              className="h-11 pl-7"
-            />
-          </div>
-          <Button
-            onClick={handleAssignPoints}
-            disabled={assigning || previewPoints <= 0}
-            className="h-11 font-semibold"
-          >
-            <Plus size={18} className="mr-1" />
-            Registrar
-          </Button>
+      <div className="space-y-3 pt-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {/* MONTO VENTA */}
+            <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-semibold text-sm">$</span>
+                <Input
+                    type="number"
+                    placeholder="Monto venta"
+                    value={saleAmount}
+                    onChange={(e) => setSaleAmount(e.target.value)}
+                    className="h-11 pl-7"
+                />
+            </div>
+
+            {/* FOLIO TICKET */}
+            <div className="relative">
+                <Hash size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                    type="text"
+                    placeholder="Folio / Ticket"
+                    value={ticketFolio}
+                    onChange={(e) => setTicketFolio(e.target.value)}
+                    className="h-11 pl-9"
+                />
+            </div>
         </div>
 
+        <Button
+          onClick={handleAssignPoints}
+          disabled={assigning || previewPoints <= 0 || !ticketFolio}
+          className="w-full h-11 font-bold text-base"
+        >
+          {assigning ? 'Registrando...' : 'Registrar Venta y Sumar Puntos'}
+        </Button>
+
         {previewAmount > 0 && (
-          <p className="text-xs text-muted-foreground pl-1">
-            Venta: <span className="font-semibold text-foreground">${previewAmount}</span>
-            {' → '}
-            <span className="font-bold text-primary">{previewPoints} puntos</span>
-            {membership?.status === 'active' && (membership?.is_plus || Number(membership?.points_multiplier) > 1) && (
-              <span className="text-primary"> (x{membership?.points_multiplier || 1} membresía)</span>
-            )}
-          </p>
+          <div className="bg-primary/5 border border-primary/10 rounded-lg p-3 text-center">
+            <p className="text-sm text-muted-foreground">
+              Se sumarán <span className="font-bold text-primary text-lg">{previewPoints} puntos</span>
+            </p>
+          </div>
         )}
       </div>
 
@@ -229,28 +241,14 @@ function CustomerCard({
         ) : activity.length === 0 ? (
           <p className="text-xs text-muted-foreground">Sin actividad</p>
         ) : (
-          <div className="space-y-1 max-h-40 overflow-y-auto">
+          <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
             {activity.map((a) => (
-              <div key={a.id} className="flex justify-between text-xs border-b border-border py-1.5">
-                <span className="text-muted-foreground">
-                  {a.type === 'earn'
-                    ? '➕'
-                    : a.type === 'bonus'
-                    ? '🎁'
-                    : a.type === 'redeem'
-                    ? '🎟️'
-                    : a.type === 'referral'
-                    ? '👥'
-                    : a.type === 'promotion'
-                    ? '🎉'
-                    : a.type === 'membership'
-                    ? '⭐'
-                    : '📝'}{' '}
-                  {a.note || a.type}
+              <div key={a.id} className="flex justify-between text-xs border-b border-border py-2">
+                <span className="text-muted-foreground truncate max-w-[180px]">
+                  {a.type === 'earn' ? '➕ ' : '🎁 '}{a.note || a.type}
                 </span>
-                <span className={`font-mono font-semibold ${a.points >= 0 ? 'text-primary' : 'text-destructive'}`}>
-                  {a.points >= 0 ? '+' : ''}
-                  {a.points}
+                <span className={`font-mono font-bold ${a.points >= 0 ? 'text-primary' : 'text-destructive'}`}>
+                  {a.points >= 0 ? '+' : ''}{a.points}
                 </span>
               </div>
             ))}
@@ -418,18 +416,20 @@ function ScanTab() {
         />
       )}
 
-      <div className="flex gap-2">
-        <Input
-          placeholder="O ingresa el token QR manualmente"
-          value={qrToken}
-          onChange={(e) => setQrToken(e.target.value)}
-          className="font-mono h-11"
-          onKeyDown={(e) => e.key === 'Enter' && handleManualScan()}
-        />
-        <Button onClick={handleManualScan} className="h-11">
-          <QrCode size={18} />
-        </Button>
-      </div>
+      {!scannedUser && (
+        <div className="flex gap-2">
+            <Input
+            placeholder="O ingresa el token QR manualmente"
+            value={qrToken}
+            onChange={(e) => setQrToken(e.target.value)}
+            className="font-mono h-11"
+            onKeyDown={(e) => e.key === 'Enter' && handleManualScan()}
+            />
+            <Button onClick={handleManualScan} className="h-11">
+            <QrCode size={18} />
+            </Button>
+        </div>
+      )}
 
       {scannedUser && businessId && (
         <CustomerCard

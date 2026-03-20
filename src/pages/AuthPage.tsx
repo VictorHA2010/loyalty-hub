@@ -21,10 +21,28 @@ const AuthPage = () => {
 
     try {
       if (mode === 'login') {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email, password });
+        if (authError) throw authError;
+
+        // --- LÓGICA DE REDIRECCIÓN INTELIGENTE ---
+        // Buscamos si el usuario ya tiene un negocio asociado (usando owner_id que creamos)
+        const { data: business, error: bizError } = await supabase
+          .from('businesses')
+          .select('slug')
+          .eq('owner_id', authData.user.id)
+          .maybeSingle();
+
         toast.success('Sesión iniciada');
-        navigate('/select-business');
+
+        if (business) {
+          // Si tiene negocio, va a su URL privada
+          navigate(`/admin/${business.slug}`);
+        } else {
+          // MÓDULO ONBOARDING: Si no tiene negocio, va a elegir plan
+          navigate('/subscription-plans');
+        }
+        // ------------------------------------------
+
       } else if (mode === 'register') {
         const { error } = await supabase.auth.signUp({
           email,
@@ -53,7 +71,7 @@ const AuthPage = () => {
 
   return (
     <div className="flex min-h-screen bg-background">
-      {/* Left panel - Branding */}
+      {/* Panel Izquierdo - Branding */}
       <div className="hidden lg:flex lg:w-1/2 bg-primary relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary to-accent opacity-90" />
         <div className="relative z-10 flex flex-col justify-center px-16 text-primary-foreground">
@@ -70,15 +88,13 @@ const AuthPage = () => {
             La plataforma completa para administrar puntos, recompensas y membresías de tus clientes.
           </p>
         </div>
-        {/* Decorative circles */}
         <div className="absolute -bottom-24 -right-24 w-96 h-96 rounded-full bg-primary-foreground/5" />
         <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full bg-primary-foreground/5" />
       </div>
 
-      {/* Right panel - Form */}
+      {/* Panel Derecho - Formulario */}
       <div className="flex-1 flex items-center justify-center px-4">
         <div className="w-full max-w-sm space-y-8">
-          {/* Mobile logo */}
           <div className="lg:hidden flex items-center justify-center gap-2 mb-4">
             <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
               <Shield size={20} className="text-primary-foreground" />

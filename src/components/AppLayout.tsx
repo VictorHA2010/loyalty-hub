@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useState } from 'react';
+import { RoleSwitcher } from './RoleSwitcher'; // PASO 1: IMPORTACIÓN
 
 interface NavItem {
   label: string;
@@ -135,30 +136,35 @@ const AppLayout = ({ children, role }: AppLayoutProps) => {
 
       {/* Footer actions */}
       <div className="px-3 py-3 border-t border-sidebar-border space-y-0.5">
-        {globalRole === 'platform_admin' ? (
+        {/* PASO 2: INSERTAR EL SWITCHER AQUÍ */}
+        <RoleSwitcher />
+        
+        <div className="pt-2">
+          {globalRole === 'platform_admin' ? (
+            <button
+              onClick={() => { navigate('/platform'); setMobileOpen(false); }}
+              className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent w-full transition-colors"
+            >
+              <ArrowLeft size={18} />
+              Plataforma
+            </button>
+          ) : (
+            <button
+              onClick={() => { handleSwitchBusiness(); setMobileOpen(false); }}
+              className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent w-full transition-colors"
+            >
+              <ArrowLeft size={18} />
+              Cambiar negocio
+            </button>
+          )}
           <button
-            onClick={() => { navigate('/platform'); setMobileOpen(false); }}
+            onClick={handleSignOut}
             className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent w-full transition-colors"
           >
-            <ArrowLeft size={18} />
-            Plataforma
+            <LogOut size={18} />
+            Cerrar sesión
           </button>
-        ) : (
-          <button
-            onClick={() => { handleSwitchBusiness(); setMobileOpen(false); }}
-            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent w-full transition-colors"
-          >
-            <ArrowLeft size={18} />
-            Cambiar negocio
-          </button>
-        )}
-        <button
-          onClick={handleSignOut}
-          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent w-full transition-colors"
-        >
-          <LogOut size={18} />
-          Cerrar sesión
-        </button>
+        </div>
       </div>
     </>
   );
