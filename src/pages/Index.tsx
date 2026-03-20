@@ -1,4 +1,4 @@
-// src/pages/Index.tsx  ← reemplaza tu archivo completo
+// src/pages/Index.tsx
 
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -20,35 +20,35 @@ const Index = () => {
       const userId = session.user.id;
 
       try {
-        // ── 1. PRIORIDAD: ¿Es dueño de un negocio? ──────────────────────────
-        const { data: business } = await supabase
-          .from('businesses')
-          .select('slug')
-          .eq('owner_id', userId)
-          .maybeSingle();
-
-        if (business?.slug) {
-          navigate(`/admin/${business.slug}`);
-          return;
-        }
-
-        // ── 2. ¿Es staff de un negocio? ─────────────────────────────────────
-        const { data: staffMember } = await supabase
-          .from('staff')
+        // 1. ¿Es business_admin de algún negocio?
+        const { data: adminMember } = await supabase
+          .from('business_members')
           .select('business_id, businesses(slug)')
           .eq('user_id', userId)
+          .eq('role', 'business_admin')
+          .eq('status', 'active')
+          .maybeSingle();
+
+        if (adminMember) {
+          const slug = (adminMember.businesses as any)?.slug;
+          if (slug) { navigate(`/admin/${slug}`); return; }
+        }
+
+        // 2. ¿Es staff de algún negocio?
+        const { data: staffMember } = await supabase
+          .from('business_members')
+          .select('business_id, businesses(slug)')
+          .eq('user_id', userId)
+          .eq('role', 'staff')
+          .eq('status', 'active')
           .maybeSingle();
 
         if (staffMember) {
-          // La relación devuelve un objeto, no un array
-          const staffSlug = (staffMember.businesses as any)?.slug;
-          if (staffSlug) {
-            navigate(`/staff/${staffSlug}`);
-            return;
-          }
+          const slug = (staffMember.businesses as any)?.slug;
+          if (slug) { navigate(`/staff/${slug}`); return; }
         }
 
-        // ── 3. ¿Es cliente de algún negocio? ────────────────────────────────
+        // 3. ¿Es cliente de algún negocio?
         const { data: customerLink } = await supabase
           .from('customer_businesses')
           .select('business_id, businesses(slug)')
@@ -56,15 +56,11 @@ const Index = () => {
           .maybeSingle();
 
         if (customerLink) {
-          // FIX: antes era /business/:id — ahora usamos la ruta pública correcta
-          const customerSlug = (customerLink.businesses as any)?.slug;
-          if (customerSlug) {
-            navigate(`/b/${customerSlug}`);
-            return;
-          }
+          const slug = (customerLink.businesses as any)?.slug;
+          if (slug) { navigate(`/b/${slug}`); return; }
         }
 
-        // ── 4. Usuario sin ningún vínculo → onboarding / planes ─────────────
+        // 4. Sin vínculo → onboarding
         navigate('/subscription-plans');
 
       } catch (error) {
@@ -80,9 +76,7 @@ const Index = () => {
     <div className="h-screen w-full flex items-center justify-center bg-background">
       <div className="flex flex-col items-center gap-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-sm text-muted-foreground animate-pulse">
-          Cargando tu perfil...
-        </p>
+        <p className="text-sm text-muted-foreground animate-pulse">Cargando tu perfil...</p>
       </div>
     </div>
   );

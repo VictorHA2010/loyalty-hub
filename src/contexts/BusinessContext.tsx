@@ -1,39 +1,35 @@
 // src/contexts/BusinessContext.tsx
 
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-} from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 
-// ─── Interfaz completa ────────────────────────────────────────────────────────
-// FIX: Antes estaba comentada con "// ..." → TypeScript no podía inferir
-//      campos como `slug`, causando errores en RoleSwitcher y AppLayout.
+// ─── Interfaz alineada 100% con la tabla `businesses` real en Supabase ────────
 
 export interface Business {
   id: string;
   name: string;
   slug: string;
-  owner_id: string;
   logo_url?: string | null;
   primary_color?: string | null;
   secondary_color?: string | null;
-  description?: string | null;
-  // Suscripción
+  accent_color?: string | null;
+  short_description?: string | null;
+  welcome_message?: string | null;
+  business_type?: string | null;
+  active: boolean;
+  is_active?: boolean | null;
   subscription_status?: string | null;
-  subscription_plan?: string | null;
-  subscription_end_date?: string | null;
-  trial_ends_at?: string | null;
-  // Configuración de puntos
-  points_per_peso?: number | null;
-  min_purchase_for_points?: number | null;
-  // Metadatos
+  stripe_customer_id?: string | null;
+  stripe_price_id?: string | null;
+  current_period_end?: string | null;
+  custom_domain?: string | null;
+  banner_active: boolean;
+  banner_title?: string | null;
+  banner_description?: string | null;
+  banner_image?: string | null;
+  banner_link?: string | null;
   created_at?: string | null;
-  updated_at?: string | null;
 }
 
 // ─── Contexto ─────────────────────────────────────────────────────────────────
@@ -60,17 +56,13 @@ export const useBusiness = () => {
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
-export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { slug } = useParams<{ slug: string }>();
   const [business, setBusiness] = useState<Business | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // ── FIX CRÍTICO: funciones al scope del componente con useCallback ──────────
-  // Antes estaban dentro del useEffect → refetchBusiness() lanzaba ReferenceError.
-
+  // ── fetchBySlug — para rutas /b/:slug, /admin/:slug, /staff/:slug ──────────
   const fetchBySlug = useCallback(async (businessSlug: string) => {
     setLoading(true);
     setError(null);
@@ -90,13 +82,14 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({
     setLoading(false);
   }, []);
 
-  const fetchByOwner = useCallback(async () => {
+  // ── fetchByMember — para rutas sin slug (dashboard, planes) ───────────────
+  // Ya no buscamos por owner_id (no existe en BD).
+  // Buscamos en business_members donde el usuario es business_admin.
+  const fetchByMember = useCallback(async () => {
     setLoading(true);
     setError(null);
 
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+    const { data: { session } } = await supabase.auth.getSession();
 
     if (!session) {
       setLoading(false);
@@ -104,17 +97,22 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({
     }
 
     const { data, error: err } = await supabase
-      .from('businesses')
-      .select('*')
-      .eq('owner_id', session.user.id)
+      .from('business_members')
+      .select('business_id, businesses(*)')
+      .eq('user_id', session.user.id)
+      .eq('role', 'business_admin')
+      .eq('status', 'active')
       .maybeSingle();
 
     if (err) {
-      console.error('[BusinessContext] Error fetchByOwner:', err);
+      console.error('[BusinessContext] Error fetchByMember:', err);
     }
 
-    // data puede ser null si el usuario aún no tiene negocio (irá a contratar)
-    setBusiness(data ? (data as Business) : null);
+    if (data?.businesses) {
+      setBusiness(data.businesses as unknown as Business);
+    } else {
+      setBusiness(null);
+    }
     setLoading(false);
   }, []);
 
@@ -122,52 +120,40 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({
 
   useEffect(() => {
     let cancelled = false;
-
     const load = async () => {
       if (cancelled) return;
       if (slug) {
         await fetchBySlug(slug);
       } else {
-        await fetchByOwner();
+        await fetchByMember();
       }
     };
-
     load();
-    return () => {
-      cancelled = true;
-    };
-  }, [slug, fetchBySlug, fetchByOwner]);
+    return () => { cancelled = true; };
+  }, [slug, fetchBySlug, fetchByMember]);
 
-  // ── refetchBusiness — ahora SÍ puede llamar a las funciones del scope ──────
+  // ── refetchBusiness ────────────────────────────────────────────────────────
 
   const refetchBusiness = useCallback(() => {
-    if (slug) {
-      fetchBySlug(slug);
-    } else {
-      fetchByOwner();
-    }
-  }, [slug, fetchBySlug, fetchByOwner]);
+    if (slug) fetchBySlug(slug);
+    else fetchByMember();
+  }, [slug, fetchBySlug, fetchByMember]);
 
-  // ── Efectos de Favicon y Manifest (se mantienen) ───────────────────────────
+  // ── Efectos de Favicon y Theme Color ──────────────────────────────────────
 
   useEffect(() => {
     if (!business) return;
 
-    // Favicon dinámico
     if (business.logo_url) {
-      const link =
-        (document.querySelector("link[rel='icon']") as HTMLLinkElement) ||
-        document.createElement('link');
+      const link = (document.querySelector("link[rel='icon']") as HTMLLinkElement)
+        || document.createElement('link');
       link.rel = 'icon';
       link.href = business.logo_url;
       document.head.appendChild(link);
     }
 
-    // Color primario en meta theme-color
     if (business.primary_color) {
-      let meta = document.querySelector(
-        "meta[name='theme-color']"
-      ) as HTMLMetaElement;
+      let meta = document.querySelector("meta[name='theme-color']") as HTMLMetaElement;
       if (!meta) {
         meta = document.createElement('meta');
         meta.name = 'theme-color';
@@ -176,9 +162,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({
       meta.content = business.primary_color;
     }
   }, [business]);
-
-  // ── Render ─────────────────────────────────────────────────────────────────
-
+  
   return (
     <BusinessCtx.Provider value={{ business, loading, error, refetchBusiness }}>
       {children}

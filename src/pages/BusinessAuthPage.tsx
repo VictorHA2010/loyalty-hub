@@ -30,10 +30,11 @@ const BusinessAuthPage = () => {
     }
   }, [user, business]);
 
-  // PATCH 1 APLICADO: insert completo + error handling sin bloquear flujo
   const autoLinkAndRedirect = async () => {
     if (!user || !business) return;
     try {
+      // Vincular como cliente si no existe el vínculo
+      // customer_businesses solo tiene: user_id, business_id, joined_at
       const { data: existing } = await supabase
         .from('customer_businesses')
         .select('id')
@@ -47,37 +48,36 @@ const BusinessAuthPage = () => {
           .insert({
             user_id: user.id,
             business_id: business.id,
-            role: 'customer',
-            points: 0,
-            joined_at: new Date().toISOString(),
+            // joined_at tiene default en BD, no es necesario enviarlo
           });
 
         if (insertError) {
           console.error('[BusinessAuthPage] Error al vincular cliente:', insertError);
-          // No bloqueamos el flujo — el usuario puede entrar igual
         }
       }
 
-      // Verificar si tiene un rol especial (admin o staff) en este negocio
-      const { data: roles } = await supabase
-        .from('user_roles')
+      // Verificar si tiene un rol especial en business_members
+      const { data: memberRow } = await supabase
+        .from('business_members')
         .select('role')
         .eq('user_id', user.id)
-        .eq('business_id', business.id);
+        .eq('business_id', business.id)
+        .eq('status', 'active')
+        .maybeSingle();
 
-      if (roles && roles.length > 0) {
-        const role = roles[0].role;
-        if (role === 'business_admin') {
-          navigate(`/admin/${business.slug}`, { replace: true });
-          return;
-        }
-        if (role === 'staff') {
-          navigate(`/staff/${business.slug}`, { replace: true });
-          return;
-        }
+      if (memberRow?.role === 'business_admin') {
+        navigate(`/admin/${business.slug}`, { replace: true });
+        return;
       }
 
+      if (memberRow?.role === 'staff') {
+        navigate(`/staff/${business.slug}`, { replace: true });
+        return;
+      }
+
+      // Cliente normal → app del negocio
       navigate(`/b/${business.slug}/app`, { replace: true });
+
     } catch (err) {
       console.error('[BusinessAuthPage] Error en autoLinkAndRedirect:', err);
       navigate(`/b/${business.slug}/app`, { replace: true });
@@ -95,7 +95,6 @@ const BusinessAuthPage = () => {
         toast.success('Sesión iniciada');
         // autoLinkAndRedirect se dispara via useEffect
 
-      // PATCH 2 APLICADO: fallback a signInWithPassword si el correo ya existe
       } else if (mode === 'register') {
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email,
@@ -106,22 +105,17 @@ const BusinessAuthPage = () => {
           },
         });
 
-        // "User already registered" → login silencioso
+        // Correo ya registrado → login automático
         if (
           signUpError?.status === 400 ||
           signUpError?.message?.toLowerCase().includes('already registered')
         ) {
-          const { error: signInError } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-          });
+          const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
           if (signInError) {
-            throw new Error(
-              'Este correo ya está registrado en otra cuenta. Verifica tu contraseña.'
-            );
+            throw new Error('Este correo ya está registrado. Verifica tu contraseña.');
           }
           toast.success('Accediendo a tu cuenta existente...');
-          // autoLinkAndRedirect se ejecutará automáticamente via useEffect
+          // autoLinkAndRedirect se ejecutará via useEffect
           return;
         }
 
@@ -131,7 +125,6 @@ const BusinessAuthPage = () => {
           toast.success('Cuenta creada');
           // autoLinkAndRedirect se ejecutará via useEffect
         } else {
-          // Email confirmation ON
           toast.success('Cuenta creada. Revisa tu email para confirmar.');
         }
 
@@ -176,22 +169,15 @@ const BusinessAuthPage = () => {
       <div className="w-full max-w-sm space-y-8 px-4">
         <div className="text-center">
           {business.logo_url ? (
-            <img
-              src={business.logo_url}
-              alt={business.name}
-              className="w-16 h-16 rounded-2xl mx-auto object-cover mb-4 shadow-card"
-            />
+            <img src={business.logo_url} alt={business.name}
+              className="w-16 h-16 rounded-2xl mx-auto object-cover mb-4 shadow-card" />
           ) : (
             <div className="w-16 h-16 rounded-2xl bg-primary/10 mx-auto flex items-center justify-center mb-4 shadow-card">
               <Shield size={24} className="text-primary" />
             </div>
           )}
           <h1 className="text-2xl font-bold text-foreground">
-            {mode === 'login'
-              ? 'Iniciar sesión'
-              : mode === 'register'
-              ? 'Crear cuenta'
-              : 'Recuperar contraseña'}
+            {mode === 'login' ? 'Iniciar sesión' : mode === 'register' ? 'Crear cuenta' : 'Recuperar contraseña'}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">{business.name}</p>
         </div>
@@ -200,93 +186,50 @@ const BusinessAuthPage = () => {
           {mode === 'register' && (
             <div className="space-y-2">
               <Label htmlFor="fullName">Nombre completo</Label>
-              <Input
-                id="fullName"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="Tu nombre"
-                required
-                className="h-11"
-              />
+              <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)}
+                placeholder="Tu nombre" required className="h-11" />
             </div>
           )}
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="correo@ejemplo.com"
-              required
-              className="h-11"
-            />
+            <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+              placeholder="correo@ejemplo.com" required className="h-11" />
           </div>
           {mode !== 'forgot' && (
             <div className="space-y-2">
               <Label htmlFor="password">Contraseña</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                minLength={6}
-                className="h-11"
-              />
+              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••" required minLength={6} className="h-11" />
             </div>
           )}
-          <Button
-            type="submit"
-            className="w-full h-11 font-semibold"
-            disabled={loading}
-            style={brandColor ? { backgroundColor: brandColor } : {}}
-          >
-            {loading
-              ? 'Cargando...'
-              : mode === 'login'
-              ? 'Iniciar sesión'
-              : mode === 'register'
-              ? 'Crear cuenta'
-              : 'Enviar enlace'}
+          <Button type="submit" className="w-full h-11 font-semibold" disabled={loading}
+            style={brandColor ? { backgroundColor: brandColor } : {}}>
+            {loading ? 'Cargando...' : mode === 'login' ? 'Iniciar sesión' : mode === 'register' ? 'Crear cuenta' : 'Enviar enlace'}
           </Button>
         </form>
 
         <div className="text-center space-y-2">
           {mode === 'login' && (
             <>
-              <button
-                type="button"
-                onClick={() => setMode('forgot')}
-                className="text-sm text-muted-foreground hover:text-primary transition-colors block mx-auto"
-              >
+              <button type="button" onClick={() => setMode('forgot')}
+                className="text-sm text-muted-foreground hover:text-primary transition-colors block mx-auto">
                 ¿Olvidaste tu contraseña?
               </button>
-              <button
-                type="button"
-                onClick={() => setMode('register')}
-                className="text-sm text-primary font-semibold hover:underline block mx-auto"
-              >
+              <button type="button" onClick={() => setMode('register')}
+                className="text-sm text-primary font-semibold hover:underline block mx-auto">
                 ¿No tienes cuenta? Regístrate
               </button>
             </>
           )}
           {mode === 'register' && (
-            <button
-              type="button"
-              onClick={() => setMode('login')}
-              className="text-sm text-primary font-semibold hover:underline"
-            >
+            <button type="button" onClick={() => setMode('login')}
+              className="text-sm text-primary font-semibold hover:underline">
               ¿Ya tienes cuenta? Inicia sesión
             </button>
           )}
           {mode === 'forgot' && (
-            <button
-              type="button"
-              onClick={() => setMode('login')}
-              className="text-sm text-primary font-semibold hover:underline"
-            >
+            <button type="button" onClick={() => setMode('login')}
+              className="text-sm text-primary font-semibold hover:underline">
               Volver a iniciar sesión
             </button>
           )}

@@ -1,6 +1,6 @@
 // src/pages/AuthPage.tsx
-// Esta página es SOLO para el login principal (/login) — dueños y staff.
-// El login de clientes desde un negocio usa BusinessAuthPage (/b/:slug/login).
+// Solo para el login principal (/login) — dueños y staff.
+// Clientes desde un negocio usan BusinessAuthPage (/b/:slug/login).
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -15,20 +15,47 @@ async function handleRedirect(
   navigate: ReturnType<typeof useNavigate>,
   userId: string
 ) {
-  const { data: business } = await supabase
-    .from('businesses').select('slug').eq('owner_id', userId).maybeSingle();
-  if (business?.slug) { navigate(`/admin/${business.slug}`); return; }
+  // 1. ¿Es business_admin?
+  const { data: adminMember } = await supabase
+    .from('business_members')
+    .select('business_id, businesses(slug)')
+    .eq('user_id', userId)
+    .eq('role', 'business_admin')
+    .eq('status', 'active')
+    .maybeSingle();
 
-  const { data: staffRow } = await supabase
-    .from('staff').select('businesses(slug)').eq('user_id', userId).maybeSingle();
-  const staffSlug = (staffRow?.businesses as any)?.slug;
-  if (staffSlug) { navigate(`/staff/${staffSlug}`); return; }
+  if (adminMember) {
+    const slug = (adminMember.businesses as any)?.slug;
+    if (slug) { navigate(`/admin/${slug}`); return; }
+  }
 
+  // 2. ¿Es staff?
+  const { data: staffMember } = await supabase
+    .from('business_members')
+    .select('business_id, businesses(slug)')
+    .eq('user_id', userId)
+    .eq('role', 'staff')
+    .eq('status', 'active')
+    .maybeSingle();
+
+  if (staffMember) {
+    const slug = (staffMember.businesses as any)?.slug;
+    if (slug) { navigate(`/staff/${slug}`); return; }
+  }
+
+  // 3. ¿Es cliente?
   const { data: customerLink } = await supabase
-    .from('customer_businesses').select('businesses(slug)').eq('user_id', userId).maybeSingle();
-  const customerSlug = (customerLink?.businesses as any)?.slug;
-  if (customerSlug) { navigate(`/b/${customerSlug}`); return; }
+    .from('customer_businesses')
+    .select('business_id, businesses(slug)')
+    .eq('user_id', userId)
+    .maybeSingle();
 
+  if (customerLink) {
+    const slug = (customerLink.businesses as any)?.slug;
+    if (slug) { navigate(`/b/${slug}`); return; }
+  }
+
+  // 4. Sin vínculo → onboarding
   navigate('/subscription-plans');
 }
 
