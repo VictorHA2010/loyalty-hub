@@ -83,11 +83,20 @@ const AuthPage = () => {
           options: { data: { full_name: fullName }, emailRedirectTo: window.location.origin },
         });
 
+        // Correo ya existe → login automático con la contraseña que escribió
         if (signUpError?.status === 400 || signUpError?.message?.toLowerCase().includes('already registered')) {
           const { data: signInData, error: signInError } =
             await supabase.auth.signInWithPassword({ email, password });
-          if (signInError) throw new Error('Este correo ya está registrado. Verifica tu contraseña e intenta iniciar sesión.');
-          toast.success('Accediendo a tu cuenta existente...');
+
+          if (signInError) {
+            // Contraseña incorrecta → cambiar a modo login con mensaje amigable
+            toast.info('Este correo ya tiene una cuenta. Inicia sesión con tu contraseña.');
+            setMode('login');
+            setPassword(''); // limpiar contraseña para que la escriba de nuevo
+            return;
+          }
+
+          toast.success('Bienvenido de vuelta. Accediendo a tu cuenta...');
           await handleRedirect(navigate, signInData.user.id);
           return;
         }
