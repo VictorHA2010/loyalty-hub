@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useBusiness } from '@/contexts/BusinessContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Building2, Shield } from 'lucide-react';
@@ -12,9 +13,46 @@ const BusinessLanding = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user && business) {
-      navigate(`/b/${business.slug}/app`, { replace: true });
-    }
+    if (!user || !business) return;
+
+    const autoLink = async () => {
+      try {
+        // Auto-vincular como cliente si no existe
+        const { data: existing } = await supabase
+          .from('customer_businesses')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('business_id', business.id)
+          .maybeSingle();
+
+        if (!existing) {
+          await supabase
+            .from('customer_businesses')
+            .insert({ user_id: user.id, business_id: business.id });
+        }
+      } catch (err) {
+        console.error('[BusinessLanding] Error al vincular:', err);
+      }
+
+      // Check if admin/staff for this business
+      const { data: memberRow } = await supabase
+        .from('business_members')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('business_id', business.id)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      if (memberRow?.role === 'business_admin') {
+        navigate(`/admin/${business.slug}`, { replace: true });
+      } else if (memberRow?.role === 'staff') {
+        navigate(`/staff/${business.slug}`, { replace: true });
+      } else {
+        navigate(`/b/${business.slug}/app`, { replace: true });
+      }
+    };
+
+    autoLink();
   }, [user, business, navigate]);
 
   if (loading) {

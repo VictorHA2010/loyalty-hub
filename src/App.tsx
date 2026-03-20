@@ -149,7 +149,7 @@ const App = () => (
             <Route path="/staff/:slug" element={<BusinessProvider><BusinessRoleGuard allowed={['staff', 'business_admin']}><StaffDashboard /></BusinessRoleGuard></BusinessProvider>} />
 
             {/* Super Admin */}
-            <Route path="/super-admin" element={<SuperAdminDashboard />} />
+            <Route path="/super-admin" element={<RoleRoute allowed={['platform_admin']}><SuperAdminDashboard /></RoleRoute>} />
 
             {/* Redirects legacy → ahora apuntan a "/" para detección de rol */}
             <Route path="/admin"     element={<Navigate to="/" replace />} />
