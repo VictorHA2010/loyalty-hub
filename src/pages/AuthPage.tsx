@@ -1,3 +1,7 @@
+// src/pages/AuthPage.tsx
+// Esta página es SOLO para el login principal (/login) — dueños y staff.
+// El login de clientes desde un negocio usa BusinessAuthPage (/b/:slug/login).
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,6 +11,27 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Shield } from 'lucide-react';
 
+async function handleRedirect(
+  navigate: ReturnType<typeof useNavigate>,
+  userId: string
+) {
+  const { data: business } = await supabase
+    .from('businesses').select('slug').eq('owner_id', userId).maybeSingle();
+  if (business?.slug) { navigate(`/admin/${business.slug}`); return; }
+
+  const { data: staffRow } = await supabase
+    .from('staff').select('businesses(slug)').eq('user_id', userId).maybeSingle();
+  const staffSlug = (staffRow?.businesses as any)?.slug;
+  if (staffSlug) { navigate(`/staff/${staffSlug}`); return; }
+
+  const { data: customerLink } = await supabase
+    .from('customer_businesses').select('businesses(slug)').eq('user_id', userId).maybeSingle();
+  const customerSlug = (customerLink?.businesses as any)?.slug;
+  if (customerSlug) { navigate(`/b/${customerSlug}`); return; }
+
+  navigate('/subscription-plans');
+}
+
 const AuthPage = () => {
   const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login');
   const [email, setEmail] = useState('');
@@ -15,76 +40,52 @@ const AuthPage = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleRedirect = async (userId: string) => {
-    // Buscamos si el usuario ya tiene un negocio asociado
-    const { data: business } = await supabase
-      .from('businesses')
-      .select('slug')
-      .eq('owner_id', userId)
-      .maybeSingle();
-
-    if (business) {
-      navigate(`/admin/${business.slug}`);
-    } else {
-      // Si no tiene negocio, lo mandamos a contratar/elegir plan
-      navigate('/subscription-plans');
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
     try {
       if (mode === 'login') {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast.success('Sesión iniciada');
-        await handleRedirect(data.user.id);
+        await handleRedirect(navigate, data.user.id);
 
       } else if (mode === 'register') {
-        // Intentamos el registro
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: { full_name: fullName },
-            emailRedirectTo: window.location.origin
-          }
+          email, password,
+          options: { data: { full_name: fullName }, emailRedirectTo: window.location.origin },
         });
 
-        // --- TRUCO DE ACCESO UNIVERSAL ---
-        // Si el correo ya existe, intentamos hacer login automáticamente
-        if (signUpError?.message.includes("already registered") || signUpError?.status === 400) {
-          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ 
-            email, 
-            password 
-          });
-
-          if (signInError) {
-            throw new Error("Este correo ya está registrado. Si es tuyo, verifica la contraseña.");
-          }
-
+        if (signUpError?.status === 400 || signUpError?.message?.toLowerCase().includes('already registered')) {
+          const { data: signInData, error: signInError } =
+            await supabase.auth.signInWithPassword({ email, password });
+          if (signInError) throw new Error('Este correo ya está registrado. Verifica tu contraseña e intenta iniciar sesión.');
           toast.success('Accediendo a tu cuenta existente...');
-          await handleRedirect(signInData.user.id);
+          await handleRedirect(navigate, signInData.user.id);
           return;
         }
 
         if (signUpError) throw signUpError;
-        
-        toast.success('Cuenta creada. Revisa tu email.');
-        if (signUpData.user) await handleRedirect(signUpData.user.id);
+
+        if (!signUpData.user) {
+          toast.success('Cuenta creada. Revisa tu bandeja de entrada para confirmar tu email.');
+          setMode('login');
+          return;
+        }
+
+        toast.success('Cuenta creada correctamente.');
+        await handleRedirect(navigate, signUpData.user.id);
 
       } else if (mode === 'forgot') {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/reset-password`
+          redirectTo: `${window.location.origin}/reset-password`,
         });
         if (error) throw error;
         toast.success('Revisa tu email para restablecer tu contraseña.');
         setMode('login');
       }
     } catch (err: any) {
-      toast.error(err.message);
+      toast.error(err.message ?? 'Ocurrió un error. Intenta de nuevo.');
     } finally {
       setLoading(false);
     }
@@ -92,7 +93,6 @@ const AuthPage = () => {
 
   return (
     <div className="flex min-h-screen bg-background">
-      {/* Panel Izquierdo - Branding */}
       <div className="hidden lg:flex lg:w-1/2 bg-primary relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary to-accent opacity-90" />
         <div className="relative z-10 flex flex-col justify-center px-16 text-primary-foreground">
@@ -113,7 +113,6 @@ const AuthPage = () => {
         <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full bg-primary-foreground/5" />
       </div>
 
-      {/* Panel Derecho - Formulario */}
       <div className="flex-1 flex items-center justify-center px-4">
         <div className="w-full max-w-sm space-y-8">
           <div className="lg:hidden flex items-center justify-center gap-2 mb-4">
@@ -128,7 +127,9 @@ const AuthPage = () => {
               {mode === 'login' ? 'Bienvenido de vuelta' : mode === 'register' ? 'Crear cuenta' : 'Recuperar contraseña'}
             </h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              {mode === 'login' ? 'Ingresa tus credenciales para continuar' : mode === 'register' ? 'Completa tus datos para registrarte' : 'Te enviaremos un enlace para restablecer tu contraseña'}
+              {mode === 'login' ? 'Ingresa tus credenciales para continuar'
+                : mode === 'register' ? 'Completa tus datos para registrarte'
+                : 'Te enviaremos un enlace para restablecer tu contraseña'}
             </p>
           </div>
 
@@ -136,41 +137,20 @@ const AuthPage = () => {
             {mode === 'register' && (
               <div className="space-y-2">
                 <Label htmlFor="fullName">Nombre completo</Label>
-                <Input
-                  id="fullName"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Tu nombre"
-                  required
-                  className="h-11"
-                />
+                <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Tu nombre" required className="h-11" />
               </div>
             )}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="correo@ejemplo.com"
-                required
-                className="h-11"
-              />
+              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                placeholder="correo@ejemplo.com" required className="h-11" />
             </div>
             {mode !== 'forgot' && (
               <div className="space-y-2">
                 <Label htmlFor="password">Contraseña</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                  minLength={6}
-                  className="h-11"
-                />
+                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••" required minLength={6} className="h-11" />
               </div>
             )}
             <Button type="submit" className="w-full h-11 font-semibold" disabled={loading}>
@@ -181,21 +161,25 @@ const AuthPage = () => {
           <div className="text-center space-y-2">
             {mode === 'login' && (
               <>
-                <button type="button" onClick={() => setMode('forgot')} className="text-sm text-muted-foreground hover:text-primary transition-colors block mx-auto">
+                <button type="button" onClick={() => setMode('forgot')}
+                  className="text-sm text-muted-foreground hover:text-primary transition-colors block mx-auto">
                   ¿Olvidaste tu contraseña?
                 </button>
-                <button type="button" onClick={() => setMode('register')} className="text-sm text-primary font-medium hover:underline block mx-auto">
+                <button type="button" onClick={() => setMode('register')}
+                  className="text-sm text-primary font-medium hover:underline block mx-auto">
                   ¿No tienes cuenta? Regístrate
                 </button>
               </>
             )}
             {mode === 'register' && (
-              <button type="button" onClick={() => setMode('login')} className="text-sm text-primary font-medium hover:underline">
+              <button type="button" onClick={() => setMode('login')}
+                className="text-sm text-primary font-medium hover:underline">
                 ¿Ya tienes cuenta? Inicia sesión
               </button>
             )}
             {mode === 'forgot' && (
-              <button type="button" onClick={() => setMode('login')} className="text-sm text-primary font-medium hover:underline">
+              <button type="button" onClick={() => setMode('login')}
+                className="text-sm text-primary font-medium hover:underline">
                 Volver a iniciar sesión
               </button>
             )}

@@ -1,3 +1,5 @@
+// src/pages/BusinessAuthPage.tsx
+
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -28,6 +30,7 @@ const BusinessAuthPage = () => {
     }
   }, [user, business]);
 
+  // PATCH 1 APLICADO: insert completo + error handling sin bloquear flujo
   const autoLinkAndRedirect = async () => {
     if (!user || !business) return;
     try {
@@ -39,12 +42,23 @@ const BusinessAuthPage = () => {
         .maybeSingle();
 
       if (!existing) {
-        await supabase.from('customer_businesses').insert({
-          user_id: user.id,
-          business_id: business.id,
-        });
+        const { error: insertError } = await supabase
+          .from('customer_businesses')
+          .insert({
+            user_id: user.id,
+            business_id: business.id,
+            role: 'customer',
+            points: 0,
+            joined_at: new Date().toISOString(),
+          });
+
+        if (insertError) {
+          console.error('[BusinessAuthPage] Error al vincular cliente:', insertError);
+          // No bloqueamos el flujo — el usuario puede entrar igual
+        }
       }
 
+      // Verificar si tiene un rol especial (admin o staff) en este negocio
       const { data: roles } = await supabase
         .from('user_roles')
         .select('role')
@@ -64,7 +78,8 @@ const BusinessAuthPage = () => {
       }
 
       navigate(`/b/${business.slug}/app`, { replace: true });
-    } catch {
+    } catch (err) {
+      console.error('[BusinessAuthPage] Error en autoLinkAndRedirect:', err);
       navigate(`/b/${business.slug}/app`, { replace: true });
     }
   };
@@ -78,8 +93,11 @@ const BusinessAuthPage = () => {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast.success('Sesión iniciada');
+        // autoLinkAndRedirect se dispara via useEffect
+
+      // PATCH 2 APLICADO: fallback a signInWithPassword si el correo ya existe
       } else if (mode === 'register') {
-        const { data: signUpData, error } = await supabase.auth.signUp({
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -87,12 +105,36 @@ const BusinessAuthPage = () => {
             emailRedirectTo: `${window.location.origin}/b/${business?.slug}/app`,
           },
         });
-        if (error) throw error;
+
+        // "User already registered" → login silencioso
+        if (
+          signUpError?.status === 400 ||
+          signUpError?.message?.toLowerCase().includes('already registered')
+        ) {
+          const { error: signInError } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+          if (signInError) {
+            throw new Error(
+              'Este correo ya está registrado en otra cuenta. Verifica tu contraseña.'
+            );
+          }
+          toast.success('Accediendo a tu cuenta existente...');
+          // autoLinkAndRedirect se ejecutará automáticamente via useEffect
+          return;
+        }
+
+        if (signUpError) throw signUpError;
+
         if (signUpData.user && signUpData.session) {
           toast.success('Cuenta creada');
+          // autoLinkAndRedirect se ejecutará via useEffect
         } else {
+          // Email confirmation ON
           toast.success('Cuenta creada. Revisa tu email para confirmar.');
         }
+
       } else if (mode === 'forgot') {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${window.location.origin}/reset-password`,
@@ -134,14 +176,22 @@ const BusinessAuthPage = () => {
       <div className="w-full max-w-sm space-y-8 px-4">
         <div className="text-center">
           {business.logo_url ? (
-            <img src={business.logo_url} alt={business.name} className="w-16 h-16 rounded-2xl mx-auto object-cover mb-4 shadow-card" />
+            <img
+              src={business.logo_url}
+              alt={business.name}
+              className="w-16 h-16 rounded-2xl mx-auto object-cover mb-4 shadow-card"
+            />
           ) : (
             <div className="w-16 h-16 rounded-2xl bg-primary/10 mx-auto flex items-center justify-center mb-4 shadow-card">
               <Shield size={24} className="text-primary" />
             </div>
           )}
           <h1 className="text-2xl font-bold text-foreground">
-            {mode === 'login' ? 'Iniciar sesión' : mode === 'register' ? 'Crear cuenta' : 'Recuperar contraseña'}
+            {mode === 'login'
+              ? 'Iniciar sesión'
+              : mode === 'register'
+              ? 'Crear cuenta'
+              : 'Recuperar contraseña'}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">{business.name}</p>
         </div>
@@ -150,17 +200,41 @@ const BusinessAuthPage = () => {
           {mode === 'register' && (
             <div className="space-y-2">
               <Label htmlFor="fullName">Nombre completo</Label>
-              <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Tu nombre" required className="h-11" />
+              <Input
+                id="fullName"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="Tu nombre"
+                required
+                className="h-11"
+              />
             </div>
           )}
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="correo@ejemplo.com" required className="h-11" />
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="correo@ejemplo.com"
+              required
+              className="h-11"
+            />
           </div>
           {mode !== 'forgot' && (
             <div className="space-y-2">
               <Label htmlFor="password">Contraseña</Label>
-              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6} className="h-11" />
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+                minLength={6}
+                className="h-11"
+              />
             </div>
           )}
           <Button
@@ -169,28 +243,50 @@ const BusinessAuthPage = () => {
             disabled={loading}
             style={brandColor ? { backgroundColor: brandColor } : {}}
           >
-            {loading ? 'Cargando...' : mode === 'login' ? 'Iniciar sesión' : mode === 'register' ? 'Crear cuenta' : 'Enviar enlace'}
+            {loading
+              ? 'Cargando...'
+              : mode === 'login'
+              ? 'Iniciar sesión'
+              : mode === 'register'
+              ? 'Crear cuenta'
+              : 'Enviar enlace'}
           </Button>
         </form>
 
         <div className="text-center space-y-2">
           {mode === 'login' && (
             <>
-              <button type="button" onClick={() => setMode('forgot')} className="text-sm text-muted-foreground hover:text-primary transition-colors block mx-auto">
+              <button
+                type="button"
+                onClick={() => setMode('forgot')}
+                className="text-sm text-muted-foreground hover:text-primary transition-colors block mx-auto"
+              >
                 ¿Olvidaste tu contraseña?
               </button>
-              <button type="button" onClick={() => setMode('register')} className="text-sm text-primary font-semibold hover:underline block mx-auto">
+              <button
+                type="button"
+                onClick={() => setMode('register')}
+                className="text-sm text-primary font-semibold hover:underline block mx-auto"
+              >
                 ¿No tienes cuenta? Regístrate
               </button>
             </>
           )}
           {mode === 'register' && (
-            <button type="button" onClick={() => setMode('login')} className="text-sm text-primary font-semibold hover:underline">
+            <button
+              type="button"
+              onClick={() => setMode('login')}
+              className="text-sm text-primary font-semibold hover:underline"
+            >
               ¿Ya tienes cuenta? Inicia sesión
             </button>
           )}
           {mode === 'forgot' && (
-            <button type="button" onClick={() => setMode('login')} className="text-sm text-primary font-semibold hover:underline">
+            <button
+              type="button"
+              onClick={() => setMode('login')}
+              className="text-sm text-primary font-semibold hover:underline"
+            >
               Volver a iniciar sesión
             </button>
           )}

@@ -1,3 +1,5 @@
+// src/pages/Index.tsx  ← reemplaza tu archivo completo
+
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,7 +11,7 @@ const Index = () => {
   useEffect(() => {
     const checkUserAndRedirect = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (!session) {
         navigate('/login');
         return;
@@ -18,50 +20,55 @@ const Index = () => {
       const userId = session.user.id;
 
       try {
-        // 1. PRIORIDAD: ¿ES DUEÑO DE UN NEGOCIO?
+        // ── 1. PRIORIDAD: ¿Es dueño de un negocio? ──────────────────────────
         const { data: business } = await supabase
           .from('businesses')
           .select('slug')
           .eq('owner_id', userId)
           .maybeSingle();
 
-        if (business) {
+        if (business?.slug) {
           navigate(`/admin/${business.slug}`);
           return;
         }
 
-        // 2. ¿ES STAFF DE UN NEGOCIO?
+        // ── 2. ¿Es staff de un negocio? ─────────────────────────────────────
         const { data: staffMember } = await supabase
-          .from('staff') // Asegúrate que tu tabla se llame 'staff'
+          .from('staff')
           .select('business_id, businesses(slug)')
           .eq('user_id', userId)
           .maybeSingle();
 
         if (staffMember) {
-          // @ts-ignore
-          const staffSlug = staffMember.businesses?.slug;
-          navigate(`/staff/${staffSlug || ''}`);
-          return;
+          // La relación devuelve un objeto, no un array
+          const staffSlug = (staffMember.businesses as any)?.slug;
+          if (staffSlug) {
+            navigate(`/staff/${staffSlug}`);
+            return;
+          }
         }
 
-        // 3. ¿ES CLIENTE DE ALGUIEN?
-        const { data: customer } = await supabase
+        // ── 3. ¿Es cliente de algún negocio? ────────────────────────────────
+        const { data: customerLink } = await supabase
           .from('customer_businesses')
-          .select('business_id')
+          .select('business_id, businesses(slug)')
           .eq('user_id', userId)
           .maybeSingle();
 
-        if (customer) {
-          navigate(`/business/${customer.business_id}`);
-          return;
+        if (customerLink) {
+          // FIX: antes era /business/:id — ahora usamos la ruta pública correcta
+          const customerSlug = (customerLink.businesses as any)?.slug;
+          if (customerSlug) {
+            navigate(`/b/${customerSlug}`);
+            return;
+          }
         }
 
-        // 4. SI NO ES NADA DE LO ANTERIOR: Es un usuario que quiere contratar
-        // O un cliente que entró por la URL principal para crear su negocio
+        // ── 4. Usuario sin ningún vínculo → onboarding / planes ─────────────
         navigate('/subscription-plans');
 
       } catch (error) {
-        console.error("Error en la redirección:", error);
+        console.error('[Index] Error en redirección:', error);
         navigate('/login');
       }
     };
@@ -73,7 +80,9 @@ const Index = () => {
     <div className="h-screen w-full flex items-center justify-center bg-background">
       <div className="flex flex-col items-center gap-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-sm text-muted-foreground animate-pulse">Cargando tu perfil...</p>
+        <p className="text-sm text-muted-foreground animate-pulse">
+          Cargando tu perfil...
+        </p>
       </div>
     </div>
   );
