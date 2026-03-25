@@ -21,36 +21,32 @@ const Index = () => {
 
       try {
         // 1. ¿Es business_admin de algún negocio?
-        const { data: adminMember } = await supabase
-          .from('business_members')
+        const { data: adminRole } = await supabase
+          .from('user_roles')
           .select('business_id, businesses(slug)')
           .eq('user_id', userId)
           .eq('role', 'business_admin')
-          .eq('status', 'active')
           .maybeSingle();
 
-        if (adminMember) {
-          const slug = (adminMember.businesses as any)?.slug;
+        if (adminRole) {
+          const slug = (adminRole.businesses as any)?.slug;
           if (slug) { navigate(`/admin/${slug}`); return; }
         }
 
         // 2. ¿Es staff de algún negocio?
-        const { data: staffMember } = await supabase
-          .from('business_members')
+        const { data: staffRole } = await supabase
+          .from('user_roles')
           .select('business_id, businesses(slug)')
           .eq('user_id', userId)
           .eq('role', 'staff')
-          .eq('status', 'active')
           .maybeSingle();
 
-        if (staffMember) {
-          const slug = (staffMember.businesses as any)?.slug;
+        if (staffRole) {
+          const slug = (staffRole.businesses as any)?.slug;
           if (slug) { navigate(`/staff/${slug}`); return; }
         }
 
-        // 3. Si solo es cliente → planes para que pueda crear su negocio
-        // NO redirigir al negocio donde es cliente desde Index,
-        // esa redirección solo ocurre desde /b/:slug/login
+        // 3. Sin negocio → planes
         navigate('/subscription-plans');
 
       } catch (error) {
