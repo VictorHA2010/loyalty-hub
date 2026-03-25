@@ -51,21 +51,29 @@ const SubscriptionPlans = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  // Estados para nuevo negocio (Onboarding)
   const [newBizName, setNewBizName] = useState("");
   const [newBizSlug, setNewBizSlug] = useState("");
   const [isCreatingBiz, setIsCreatingBiz] = useState(false);
 
+  // 🔥 FIX 1: detectar correctamente si está activo
+  const isActive = business?.is_active === true;
+
+  // 🔥 FIX 2: refetch después del pago
   useEffect(() => {
     if (searchParams.get("payment") === "success") {
       toast.success("¡Pago completado! Activando tu suscripción...");
       setSearchParams({}, { replace: true });
+
       let attempts = 0;
+
       const interval = setInterval(async () => {
         attempts++;
-        refetchBusiness();
+
+        await refetchBusiness();
+
         if (attempts >= 10) clearInterval(interval);
       }, 3000);
+
       return () => clearInterval(interval);
     }
   }, []);
@@ -82,7 +90,6 @@ const SubscriptionPlans = () => {
       let currentBusinessId = business?.id;
       let currentBusinessSlug = business?.slug;
 
-      // SI NO TIENE NEGOCIO, LO CREAMOS PRIMERO
       if (!business) {
         if (!newBizName || !newBizSlug) {
           toast.error("Por favor ingresa el nombre y URL de tu nuevo negocio primero.");
@@ -98,7 +105,7 @@ const SubscriptionPlans = () => {
               name: newBizName, 
               slug: newBizSlug.toLowerCase().trim().replace(/\s+/g, '-'), 
               owner_id: session.user.id,
-              is_active: false // Se activará tras el pago
+              is_active: false
             }
           ])
           .select()
@@ -113,7 +120,6 @@ const SubscriptionPlans = () => {
         currentBusinessSlug = newBiz.slug;
       }
 
-      // INVOCAR CHECKOUT DE STRIPE
       const { data, error } = await supabase.functions.invoke("create-checkout-session", {
         body: {
           priceId,
@@ -134,8 +140,6 @@ const SubscriptionPlans = () => {
     }
   };
 
-  const isActive = business?.is_active;
-
   return (
     <AppLayout role="admin">
       <div className="max-w-5xl mx-auto py-10">
@@ -146,7 +150,6 @@ const SubscriptionPlans = () => {
           </p>
         </div>
 
-        {/* FORMULARIO PARA NUEVOS DUEÑOS */}
         {!business && (
           <Card className="mb-10 border-aqua-200 bg-aqua-50/30">
             <CardHeader>
@@ -206,7 +209,11 @@ const SubscriptionPlans = () => {
                   disabled={loadingPlan !== null || isActive}
                   onClick={() => handleSubscribe(plan.priceId)}
                 >
-                  {loadingPlan === plan.priceId ? <Loader2 className="animate-spin" /> : isActive ? "Activo" : "Elegir Plan"}
+                  {loadingPlan === plan.priceId 
+                    ? <Loader2 className="animate-spin" /> 
+                    : isActive 
+                    ? "Activo" 
+                    : "Elegir Plan"}
                 </Button>
               </CardContent>
             </Card>
