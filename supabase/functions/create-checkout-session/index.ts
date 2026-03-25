@@ -46,7 +46,6 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // 🔥 FIX CRÍTICO: SIEMPRE asegurar businessId
     let finalBusinessId = businessId;
 
     if (!finalBusinessId) {
@@ -68,9 +67,8 @@ serve(async (req) => {
       });
     }
 
-    console.log("🚀 USING BUSINESS ID:", finalBusinessId);
+    console.log("USING BUSINESS ID:", finalBusinessId);
 
-    // 🔥 Obtener negocio
     const { data: business } = await supabase
       .from("businesses")
       .select("stripe_customer_id, name")
@@ -99,8 +97,6 @@ serve(async (req) => {
         .eq("id", finalBusinessId);
     }
 
-    console.log("💳 CREATING CHECKOUT FOR:", finalBusinessId);
-
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       line_items: [{ price: priceId, quantity: 1 }],
@@ -108,7 +104,7 @@ serve(async (req) => {
       success_url: successUrl,
       cancel_url: cancelUrl,
       metadata: {
-        business_id: finalBusinessId, // 🔥 SIEMPRE
+        business_id: finalBusinessId,
         user_id: userId,
         price_id: priceId,
       },
@@ -119,7 +115,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error("❌ ERROR:", error);
+    console.error("ERROR:", error);
 
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
