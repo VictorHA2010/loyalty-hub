@@ -5,6 +5,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 serve(async (req) => {
   const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
   const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
+
   if (!stripeKey || !webhookSecret) {
     return new Response(JSON.stringify({ error: "Missing Stripe config" }), { status: 500 });
   }
@@ -12,14 +13,19 @@ serve(async (req) => {
   const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
   const body = await req.text();
   const signature = req.headers.get("stripe-signature");
+
   if (!signature) {
     return new Response(JSON.stringify({ error: "No signature" }), { status: 400 });
   }
 
   let event: Stripe.Event;
+
   try {
     event = await stripe.webhooks.constructEventAsync(
-      body, signature, webhookSecret, undefined,
+      body,
+      signature,
+      webhookSecret,
+      undefined,
       Stripe.createSubtleCryptoProvider()
     );
   } catch (err) {
@@ -34,13 +40,23 @@ serve(async (req) => {
 
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
-    const businessId = session.metadata?.business_id;
-    const priceId    = session.metadata?.price_id;
-    const userId     = session.metadata?.user_id;
+
+    const businessId = session.metadata?.business_id || null;
+    const priceId = session.metadata?.price_id || null;
+    const userId = session.metadata?.user_id || null;
+
+    console.log("checkout.session.completed metadata:", {
+      businessId,
+      priceId,
+      userId,
+      sessionId: session.id,
+      customerId: session.customer,
+    });
 
     let daysToAdd = 30;
     if (priceId === "price_1TAeFwAmyaQPKkiAqZsYILm6") daysToAdd = 182;
     else if (priceId === "price_1TAeGOAmyaQPKkiAMSdISaU7") daysToAdd = 365;
+
     const periodEnd = new Date();
     periodEnd.setDate(periodEnd.getDate() + daysToAdd);
 
@@ -51,48 +67,74 @@ serve(async (req) => {
       current_period_end: periodEnd.toISOString(),
     };
 
-    if (businessId) {
-      // ── Flujo existente: activar negocio por businessId ──
-      const { error } = await supabaseAdmin
+    const activateBusinessById = async (targetBusinessId: string) => {
+      const { data, error } = await supabaseAdmin
         .from("businesses")
         .update(activationPayload)
-        .eq("id", businessId);
+        .eq("id", targetBusinessId)
+        .select("id, name, is_active, subscription_status")
+        .maybeSingle();
 
       if (error) {
         console.error("Error updating business:", error);
-        return new Response(JSON.stringify({ error: "DB update failed" }), { status: 500 });
+        throw new Error("DB update failed");
       }
 
-      console.log(`Business ${businessId} activated.`);
+      if (!data) {
+        console.warn("No business found for activation:", targetBusinessId);
+        return null;
+      }
 
-    } else if (userId) {
-      // ── Flujo nuevo: buscar negocio existente del usuario o crear uno ──
+      console.log("Business activated:", data);
+      return data;
+    };
 
-      // 1. Buscar si el usuario ya tiene un negocio en user_roles
-      const { data: existingRole } = await supabaseAdmin
-        .from("user_roles")
-        .select("business_id")
-        .eq("user_id", userId)
-        .eq("role", "business_admin")
-        .maybeSingle();
+    try {
+      // 1) Si Stripe mandó business_id, SIEMPRE intenta activar ESE negocio primero
+      if (businessId) {
+        const activated = await activateBusinessById(businessId);
 
-      if (existingRole?.business_id) {
-        // Ya tiene negocio → solo activar
-        const { error } = await supabaseAdmin
-          .from("businesses")
-          .update(activationPayload)
-          .eq("id", existingRole.business_id);
-
-        if (error) {
-          console.error("Error activating existing business:", error);
-          return new Response(JSON.stringify({ error: "DB update failed" }), { status: 500 });
+        if (activated) {
+          return new Response(JSON.stringify({ received: true, activatedBusinessId: businessId }), {
+            headers: { "Content-Type": "application/json" },
+          });
         }
 
-        console.log(`Existing business ${existingRole.business_id} activated for user ${userId}.`);
+        console.warn("Fallback to userId because businessId did not resolve:", businessId);
+      }
 
-      } else {
-        // No tiene negocio → crear uno nuevo ya activo
+      // 2) Si no se pudo por businessId, usar userId como fallback
+      if (userId) {
+        // Buscar el negocio más reciente donde el usuario sea business_admin
+        const { data: roleRows, error: rolesError } = await supabaseAdmin
+          .from("user_roles")
+          .select("business_id, created_at")
+          .eq("user_id", userId)
+          .eq("role", "business_admin")
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+        if (rolesError) {
+          console.error("Error loading user_roles:", rolesError);
+          return new Response(JSON.stringify({ error: "Failed to load user roles" }), { status: 500 });
+        }
+
+        const existingBusinessId = roleRows?.[0]?.business_id ?? null;
+
+        if (existingBusinessId) {
+          const activated = await activateBusinessById(existingBusinessId);
+
+          if (activated) {
+            console.log(`Existing business ${existingBusinessId} activated for user ${userId}.`);
+            return new Response(JSON.stringify({ received: true, activatedBusinessId: existingBusinessId }), {
+              headers: { "Content-Type": "application/json" },
+            });
+          }
+        }
+
+        // 3) Si no hay negocio, crear uno nuevo ya activo
         const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(userId);
+
         if (userError || !userData?.user) {
           console.error("Error fetching user:", userError);
           return new Response(JSON.stringify({ error: "User not found" }), { status: 500 });
@@ -104,8 +146,12 @@ serve(async (req) => {
 
         const { data: newBusiness, error: businessError } = await supabaseAdmin
           .from("businesses")
-          .insert({ name: businessName, slug, ...activationPayload })
-          .select("id")
+          .insert({
+            name: businessName,
+            slug,
+            ...activationPayload,
+          })
+          .select("id, name")
           .single();
 
         if (businessError || !newBusiness) {
@@ -115,7 +161,14 @@ serve(async (req) => {
 
         const { error: roleError } = await supabaseAdmin
           .from("user_roles")
-          .insert({ user_id: userId, business_id: newBusiness.id, role: "business_admin" });
+          .upsert(
+            {
+              user_id: userId,
+              business_id: newBusiness.id,
+              role: "business_admin",
+            },
+            { onConflict: "user_id,business_id" }
+          );
 
         if (roleError) {
           console.error("Error creating user_role:", roleError);
@@ -123,10 +176,17 @@ serve(async (req) => {
         }
 
         console.log(`Business ${newBusiness.id} created and activated for user ${userId}.`);
+
+        return new Response(JSON.stringify({ received: true, activatedBusinessId: newBusiness.id }), {
+          headers: { "Content-Type": "application/json" },
+        });
       }
 
-    } else {
       console.error("No business_id or user_id in session metadata");
+      return new Response(JSON.stringify({ error: "Missing metadata" }), { status: 400 });
+    } catch (err) {
+      console.error("Webhook processing error:", err);
+      return new Response(JSON.stringify({ error: "Webhook processing failed" }), { status: 500 });
     }
   }
 

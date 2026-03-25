@@ -4,7 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 serve(async (req) => {
@@ -14,7 +14,7 @@ serve(async (req) => {
 
   try {
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!stripeKey) throw new Error("STRIPE_SECRET_KEY not configured");
+    if (!stripeKey) throw new Error("Stripe not configured");
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
@@ -27,73 +27,70 @@ serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
     }
 
-    const userId = user.id;
     const { priceId, businessId, successUrl, cancelUrl } = await req.json();
 
     if (!priceId || !successUrl || !cancelUrl) {
-      return new Response(JSON.stringify({ error: "Missing required fields" }), { status: 400, headers: corsHeaders });
+      return new Response(JSON.stringify({ error: "Missing fields" }), { status: 400, headers: corsHeaders });
     }
 
-    const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
-    const email = user?.email;
     const supabaseAdmin = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    let customerId: string | undefined;
+    let finalBusinessId = businessId;
 
-    if (businessId) {
-      // ── Existing flow: user has a business ──
-      const { data: roleData } = await supabase
+    // 🔥 FIX CRÍTICO: si NO llega businessId → buscarlo
+    if (!finalBusinessId) {
+      const { data: role } = await supabase
         .from("user_roles")
-        .select("role")
-        .eq("user_id", userId)
-        .eq("business_id", businessId)
+        .select("business_id")
+        .eq("user_id", user.id)
         .eq("role", "business_admin")
+        .limit(1)
         .maybeSingle();
 
-      if (!roleData) {
-        return new Response(JSON.stringify({ error: "Not authorized for this business" }), { status: 403, headers: corsHeaders });
-      }
+      finalBusinessId = role?.business_id;
 
-      const { data: business } = await supabase
-        .from("businesses")
-        .select("stripe_customer_id, name")
-        .eq("id", businessId)
-        .single();
-
-      customerId = business?.stripe_customer_id;
-
-      if (!customerId) {
-        const customer = await stripe.customers.create({
-          email: email || undefined,
-          metadata: { business_id: businessId, user_id: userId },
-          name: business?.name || undefined,
-        });
-        customerId = customer.id;
-
-        await supabaseAdmin
-          .from("businesses")
-          .update({ stripe_customer_id: customerId })
-          .eq("id", businessId);
-      }
-    } else {
-      // ── New flow: user without business (new signup) ──
-      // Search for existing Stripe customer by email
-      const existingCustomers = await stripe.customers.list({ email: email || undefined, limit: 1 });
-      if (existingCustomers.data.length > 0) {
-        customerId = existingCustomers.data[0].id;
-      } else {
-        const customer = await stripe.customers.create({
-          email: email || undefined,
-          metadata: { user_id: userId },
-        });
-        customerId = customer.id;
-      }
+      console.log("AUTO businessId:", finalBusinessId);
     }
+
+    if (!finalBusinessId) {
+      return new Response(JSON.stringify({ error: "User has no business" }), { status: 400, headers: corsHeaders });
+    }
+
+    // 🔥 asegurar customer
+    const { data: business } = await supabase
+      .from("businesses")
+      .select("stripe_customer_id, name")
+      .eq("id", finalBusinessId)
+      .single();
+
+    const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
+
+    let customerId = business?.stripe_customer_id;
+
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: user.email || undefined,
+        metadata: {
+          business_id: finalBusinessId,
+          user_id: user.id,
+        },
+        name: business?.name || undefined,
+      });
+
+      customerId = customer.id;
+
+      await supabaseAdmin
+        .from("businesses")
+        .update({ stripe_customer_id: customerId })
+        .eq("id", finalBusinessId);
+    }
+
+    console.log("CREANDO CHECKOUT PARA:", finalBusinessId);
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
@@ -102,8 +99,8 @@ serve(async (req) => {
       success_url: successUrl,
       cancel_url: cancelUrl,
       metadata: {
-        ...(businessId ? { business_id: businessId } : {}),
-        user_id: userId,
+        business_id: finalBusinessId, // 🔥 SIEMPRE
+        user_id: user.id,
         price_id: priceId,
       },
     });
@@ -111,11 +108,12 @@ serve(async (req) => {
     return new Response(JSON.stringify({ url: session.url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
+
   } catch (error) {
-    console.error("Error creating checkout session:", error);
-    return new Response(JSON.stringify({ error: "An unexpected error occurred. Please try again." }), {
+    console.error("ERROR:", error);
+    return new Response(JSON.stringify({ error: "Internal error" }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: corsHeaders,
     });
   }
 });
