@@ -23,45 +23,54 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+    if (userError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
     }
 
+    const userId = user.id;
     const { priceId, businessId, successUrl, cancelUrl } = await req.json();
 
     if (!priceId || !successUrl || !cancelUrl) {
-      return new Response(JSON.stringify({ error: "Missing fields" }), { status: 400, headers: corsHeaders });
+      return new Response(JSON.stringify({ error: "Missing required fields" }), { status: 400, headers: corsHeaders });
     }
 
-    const supabaseAdmin = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const supabaseAdmin = createClient(
+      supabaseUrl,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
 
+    // 🔥 FIX CRÍTICO: SIEMPRE asegurar businessId
     let finalBusinessId = businessId;
 
-    // 🔥 FIX CRÍTICO: si NO llega businessId → buscarlo
     if (!finalBusinessId) {
       const { data: role } = await supabase
         .from("user_roles")
         .select("business_id")
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .eq("role", "business_admin")
         .limit(1)
         .maybeSingle();
 
       finalBusinessId = role?.business_id;
-
-      console.log("AUTO businessId:", finalBusinessId);
     }
 
     if (!finalBusinessId) {
-      return new Response(JSON.stringify({ error: "User has no business" }), { status: 400, headers: corsHeaders });
+      return new Response(JSON.stringify({ error: "User has no business" }), {
+        status: 400,
+        headers: corsHeaders,
+      });
     }
 
-    // 🔥 asegurar customer
+    console.log("🚀 USING BUSINESS ID:", finalBusinessId);
+
+    // 🔥 Obtener negocio
     const { data: business } = await supabase
       .from("businesses")
       .select("stripe_customer_id, name")
@@ -77,7 +86,7 @@ serve(async (req) => {
         email: user.email || undefined,
         metadata: {
           business_id: finalBusinessId,
-          user_id: user.id,
+          user_id: userId,
         },
         name: business?.name || undefined,
       });
@@ -90,7 +99,7 @@ serve(async (req) => {
         .eq("id", finalBusinessId);
     }
 
-    console.log("CREANDO CHECKOUT PARA:", finalBusinessId);
+    console.log("💳 CREATING CHECKOUT FOR:", finalBusinessId);
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
@@ -100,7 +109,7 @@ serve(async (req) => {
       cancel_url: cancelUrl,
       metadata: {
         business_id: finalBusinessId, // 🔥 SIEMPRE
-        user_id: user.id,
+        user_id: userId,
         price_id: priceId,
       },
     });
@@ -110,8 +119,9 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error("ERROR:", error);
-    return new Response(JSON.stringify({ error: "Internal error" }), {
+    console.error("❌ ERROR:", error);
+
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
       headers: corsHeaders,
     });
