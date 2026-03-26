@@ -17,7 +17,7 @@ const PLANS = [
     price: "$399 MXN",
     priceId: "price_1TAeEaAmyaQPKkiAErJomvJz",
     period: "/ mes",
-    features: ["Acceso completo", "Soporte por email", "Habilitado White Label basico"],
+    features: ["Acceso completo", "Soporte por email", "White Label básico"],
     icon: <Zap size={24} />,
     popular: false,
   },
@@ -26,7 +26,7 @@ const PLANS = [
     price: "$2,274 MXN",
     priceId: "price_1TAeFwAmyaQPKkiAqZsYILm6",
     period: "/ 6 meses",
-    features: ["Todo del plan mensual", "Soporte prioritario", "Habilitado White label"],
+    features: ["Todo del mensual", "Soporte prioritario"],
     icon: <Star size={24} />,
     popular: true,
   },
@@ -35,7 +35,7 @@ const PLANS = [
     price: "$4,309 MXN",
     priceId: "price_1TAeGOAmyaQPKkiAMSdISaU7",
     period: "/ año",
-    features: ["Todo del plan semestral", "Soporte 24/7", "Clientes ilimitados", "Multisurcursal"],
+    features: ["Todo del semestral", "Soporte 24/7"],
     icon: <Crown size={24} />,
     popular: false,
   },
@@ -43,54 +43,42 @@ const PLANS = [
 
 const SubscriptionPlans = () => {
   const { session } = useAuth();
-  const { business, refetchBusiness } = useBusiness();
-
+  const { business, loading, refetchBusiness } = useBusiness();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [newBizName, setNewBizName] = useState("");
   const [newBizSlug, setNewBizSlug] = useState("");
 
-  // 🔥 FIX REAL: detección robusta
-  const isActive = !!business?.is_active;
+  // 🔥 PROTECCIÓN TOTAL (EVITA PANTALLA BLANCA)
+  if (loading) {
+    return (
+      <AppLayout role="admin">
+        <div className="flex items-center justify-center h-screen">
+          <Loader2 className="animate-spin" />
+        </div>
+      </AppLayout>
+    );
+  }
 
-  // 🔥 DEBUG (NO BORRES)
-  console.log("BUSINESS ACTUAL:", business);
-  console.log("IS ACTIVE:", business?.is_active);
+  const isActive = business?.is_active === true;
 
-  // 🔥 REFRESH FUERTE después del pago
   useEffect(() => {
     if (searchParams.get("payment") === "success") {
-      toast.success("¡Pago completado! Activando tu suscripción...");
+      toast.success("Pago exitoso, activando...");
+
       setSearchParams({}, { replace: true });
 
-      let attempts = 0;
-
+      let tries = 0;
       const interval = setInterval(async () => {
-        attempts++;
-
-        const { data } = await supabase
-          .from("businesses")
-          .select("*")
-          .eq("id", business?.id)
-          .single();
-
-        console.log("REFETCH DB:", data);
-
+        tries++;
         await refetchBusiness();
-
-        if (data?.is_active === true) {
-          console.log("🔥 YA ACTIVO, DETENIENDO POLLING");
-          clearInterval(interval);
-        }
-
-        if (attempts >= 10) clearInterval(interval);
-
-      }, 3000);
+        if (tries >= 10) clearInterval(interval);
+      }, 2000);
 
       return () => clearInterval(interval);
     }
-  }, [searchParams, business?.id]);
+  }, []);
 
   const handleSubscribe = async (priceId: string) => {
     if (!session) {
@@ -102,43 +90,54 @@ const SubscriptionPlans = () => {
 
     try {
       let currentBusinessId = business?.id;
-      let currentBusinessSlug = business?.slug;
 
-      if (!business) {
+      // 🔥 SI NO HAY NEGOCIO → CREARLO BIEN
+      if (!currentBusinessId) {
         if (!newBizName || !newBizSlug) {
-          toast.error("Ingresa los datos del negocio");
-          setLoadingPlan(null);
+          toast.error("Completa los datos del negocio");
           return;
         }
 
-        const { data: newBiz } = await supabase
+        const { data: newBiz, error } = await supabase
           .from("businesses")
           .insert({
             name: newBizName,
-            slug: newBizSlug.toLowerCase().replace(/\s+/g, "-"),
-            owner_id: session.user.id,
+            slug: newBizSlug,
             is_active: false,
           })
           .select()
           .single();
 
+        if (error || !newBiz) throw error;
+
+        // 🔥 CRÍTICO: crear relación
+        await supabase.from("user_roles").insert({
+          user_id: session.user.id,
+          business_id: newBiz.id,
+          role: "business_admin",
+        });
+
         currentBusinessId = newBiz.id;
-        currentBusinessSlug = newBiz.slug;
       }
 
-      const { data } = await supabase.functions.invoke("create-checkout-session", {
+      const { data, error } = await supabase.functions.invoke("create-checkout-session", {
         body: {
           priceId,
           businessId: currentBusinessId,
-          successUrl: `${window.location.origin}/admin/${currentBusinessSlug}/plans?payment=success`,
-          cancelUrl: `${window.location.origin}/admin/${currentBusinessSlug}/plans`,
+          successUrl: `${window.location.origin}/subscription-plans?payment=success`,
+          cancelUrl: `${window.location.origin}/subscription-plans`,
         },
       });
 
-      if (data?.url) window.location.href = data.url;
+      if (error) throw error;
+
+      if (data?.url) {
+        window.location.href = data.url;
+      }
 
     } catch (err: any) {
-      toast.error(err.message || "Error");
+      console.error(err);
+      toast.error("Error al iniciar pago");
     } finally {
       setLoadingPlan(null);
     }
@@ -148,23 +147,15 @@ const SubscriptionPlans = () => {
     <AppLayout role="admin">
       <div className="max-w-5xl mx-auto py-10">
 
-        <div className="text-center mb-10">
-          <h1 className="text-3xl font-bold">Lleva tu negocio al siguiente nivel</h1>
-          <p className="text-muted-foreground mt-2 text-lg">
-            {business ? `Gestiona ${business.name}` : "Crea tu programa"}
-          </p>
-        </div>
-
         {!business && (
-          <Card className="mb-10">
+          <Card className="mb-8">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building2 /> Nuevo negocio
-              </CardTitle>
+              <CardTitle>Crear negocio</CardTitle>
+              <CardDescription>Antes de pagar</CardDescription>
             </CardHeader>
-            <CardContent className="grid md:grid-cols-2 gap-4">
+            <CardContent className="grid gap-4">
               <Input placeholder="Nombre" value={newBizName} onChange={(e) => setNewBizName(e.target.value)} />
-              <Input placeholder="slug" value={newBizSlug} onChange={(e) => setNewBizSlug(e.target.value)} />
+              <Input placeholder="Slug" value={newBizSlug} onChange={(e) => setNewBizSlug(e.target.value)} />
             </CardContent>
           </Card>
         )}
@@ -172,31 +163,23 @@ const SubscriptionPlans = () => {
         <div className="grid md:grid-cols-3 gap-6">
           {PLANS.map((plan) => (
             <Card key={plan.priceId}>
-              <CardHeader className="text-center">
-                <div className="flex justify-center">{plan.icon}</div>
+              <CardHeader>
                 <CardTitle>{plan.name}</CardTitle>
-                <div className="text-2xl font-bold">{plan.price}</div>
               </CardHeader>
 
               <CardContent>
-                <ul className="mb-4">
-                  {plan.features.map((f) => (
-                    <li key={f} className="flex items-center gap-2 text-sm">
-                      <Check size={14} /> {f}
-                    </li>
-                  ))}
-                </ul>
+                <p className="text-2xl font-bold">{plan.price}</p>
 
                 <Button
-                  className="w-full"
+                  className="w-full mt-4"
                   disabled={loadingPlan !== null || isActive}
                   onClick={() => handleSubscribe(plan.priceId)}
                 >
                   {loadingPlan === plan.priceId
                     ? <Loader2 className="animate-spin" />
                     : isActive
-                    ? "Activo"
-                    : "Elegir Plan"}
+                      ? "Activo"
+                      : "Elegir plan"}
                 </Button>
               </CardContent>
             </Card>
