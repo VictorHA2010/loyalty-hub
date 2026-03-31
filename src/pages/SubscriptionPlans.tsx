@@ -66,3 +66,5 @@ const handleSubscribe = async (priceId: string) => {
     setLoadingPlan(null);
   }
 };
+
+export default SubscriptionPlans;
