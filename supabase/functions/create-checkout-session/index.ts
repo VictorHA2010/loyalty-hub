@@ -2,13 +2,14 @@ import Stripe from "https://esm.sh/stripe@14.21.0?target=deno";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 Deno.serve(async (req) => {
+  // 🔥 CORS COMPLETO (FIX FINAL)
   const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "authorization, content-type, apikey",
+    "Access-Control-Allow-Headers": "authorization, content-type, apikey, x-client-info",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
   };
 
-  // 🔥 Preflight (CORS)
+  // 🔥 Preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -43,6 +44,7 @@ Deno.serve(async (req) => {
 
     let finalBusinessId = businessId;
 
+    // 🔥 Obtener negocio si no viene
     if (user && !finalBusinessId) {
       const { data: role } = await supabaseAdmin
         .from("user_roles")
@@ -55,6 +57,7 @@ Deno.serve(async (req) => {
       finalBusinessId = role?.business_id;
     }
 
+    // 🔥 Crear negocio si no existe
     if (user && !finalBusinessId) {
       const email = user.email || user.id;
       const name = email.split("@")[0];
