@@ -2,21 +2,21 @@ import Stripe from "https://esm.sh/stripe@14.21.0?target=deno";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 Deno.serve(async (req) => {
-  // CORS
+  const corsHeaders = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "authorization, content-type, apikey",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+  };
+
+  // 🔥 Preflight (CORS)
   if (req.method === "OPTIONS") {
-    return new Response("ok", {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "authorization, content-type",
-      },
-    });
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) throw new Error("Stripe not configured");
 
-    // ⚠️ YA NO BLOQUEAMOS POR AUTH
     const authHeader = req.headers.get("Authorization");
     console.log("AUTH HEADER:", authHeader);
 
@@ -30,18 +30,19 @@ Deno.serve(async (req) => {
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-    // 👇 INTENTAMOS OBTENER USUARIO (pero ya no rompemos si falla)
     const { data: { user } } = await supabase.auth.getUser();
 
     const { priceId, businessId, successUrl, cancelUrl } = await req.json();
 
     if (!priceId || !successUrl || !cancelUrl) {
-      return new Response(JSON.stringify({ error: "Missing params" }), { status: 400 });
+      return new Response(JSON.stringify({ error: "Missing params" }), {
+        status: 400,
+        headers: corsHeaders,
+      });
     }
 
     let finalBusinessId = businessId;
 
-    // 🔥 SOLO SI HAY USER
     if (user && !finalBusinessId) {
       const { data: role } = await supabaseAdmin
         .from("user_roles")
@@ -54,7 +55,6 @@ Deno.serve(async (req) => {
       finalBusinessId = role?.business_id;
     }
 
-    // 🔥 CREAR NEGOCIO SI NO EXISTE Y HAY USER
     if (user && !finalBusinessId) {
       const email = user.email || user.id;
       const name = email.split("@")[0];
@@ -101,8 +101,8 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ url: session.url }), {
       status: 200,
       headers: {
+        ...corsHeaders,
         "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
       },
     });
 
@@ -110,6 +110,7 @@ Deno.serve(async (req) => {
     console.error("💥 ERROR:", err);
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
+      headers: corsHeaders,
     });
   }
 });
