@@ -38,6 +38,7 @@ const SubscriptionPlans = () => {
         currentBusinessId = newBiz.id;
       }
 
+      // 🔥 FIX REAL AQUÍ
       const { data, error } = await supabase.functions.invoke(
         "create-checkout-session",
         {
@@ -47,18 +48,20 @@ const SubscriptionPlans = () => {
             successUrl: `${window.location.origin}/subscription-plans?payment=success`,
             cancelUrl: `${window.location.origin}/subscription-plans`,
           },
-          headers: {
-            Authorization: session?.access_token
-              ? `Bearer ${session.access_token}`
-              : "",
-          },
         }
       );
 
-      if (error) throw error;
+      // ❌ NO rompemos el flujo
+      if (error) {
+        console.error("Supabase error:", error);
+      }
+
+      console.log("DATA:", data);
 
       if (data?.url) {
         window.location.href = data.url;
+      } else {
+        toast.error("No se pudo generar el checkout");
       }
 
     } catch (err: any) {
@@ -71,7 +74,7 @@ const SubscriptionPlans = () => {
 
   return (
     <div>
-      {/* TU UI AQUÍ (NO LA BORRES) */}
+      {/* TU UI AQUÍ */}
     </div>
   );
 };
