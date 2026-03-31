@@ -16,26 +16,22 @@ Deno.serve(async (req) => {
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) throw new Error("Stripe not configured");
 
+    // ⚠️ YA NO BLOQUEAMOS POR AUTH
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
-    }
+    console.log("AUTH HEADER:", authHeader);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
+      global: authHeader ? { headers: { Authorization: authHeader } } : {},
     });
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
+    // 👇 INTENTAMOS OBTENER USUARIO (pero ya no rompemos si falla)
     const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return new Response(JSON.stringify({ error: "No user" }), { status: 401 });
-    }
 
     const { priceId, businessId, successUrl, cancelUrl } = await req.json();
 
@@ -45,7 +41,8 @@ Deno.serve(async (req) => {
 
     let finalBusinessId = businessId;
 
-    if (!finalBusinessId) {
+    // 🔥 SOLO SI HAY USER
+    if (user && !finalBusinessId) {
       const { data: role } = await supabaseAdmin
         .from("user_roles")
         .select("business_id")
@@ -57,7 +54,8 @@ Deno.serve(async (req) => {
       finalBusinessId = role?.business_id;
     }
 
-    if (!finalBusinessId) {
+    // 🔥 CREAR NEGOCIO SI NO EXISTE Y HAY USER
+    if (user && !finalBusinessId) {
       const email = user.email || user.id;
       const name = email.split("@")[0];
       const slug = `${name}-${crypto.randomUUID().slice(0, 6)}`;
@@ -85,7 +83,7 @@ Deno.serve(async (req) => {
 
     const stripe = new Stripe(stripeKey, {
       apiVersion: "2023-10-16",
-      httpClient: Stripe.createFetchHttpClient(), // 🔥 FIX CLAVE
+      httpClient: Stripe.createFetchHttpClient(),
     });
 
     const session = await stripe.checkout.sessions.create({
@@ -94,8 +92,8 @@ Deno.serve(async (req) => {
       success_url: successUrl,
       cancel_url: cancelUrl,
       metadata: {
-        business_id: finalBusinessId,
-        user_id: user.id,
+        business_id: finalBusinessId || "no-business",
+        user_id: user?.id || "no-user",
         price_id: priceId,
       },
     });
